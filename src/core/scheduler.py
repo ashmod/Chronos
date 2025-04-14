@@ -91,6 +91,9 @@ class Scheduler(ABC):
         # Get the next process to execute
         next_process = self.get_next_process(self.current_time)
         
+        # Define default value of time
+        time_used = self.time_slice
+        
         if next_process:
             # Execute the process for one time unit
             time_used = next_process.execute(self.current_time, self.time_slice)
@@ -104,6 +107,6 @@ class Scheduler(ABC):
             self.current_process = None
             
         # Advance the time
-        self.current_time += 1
+        self.current_time += time_used
         
         return self.current_process
