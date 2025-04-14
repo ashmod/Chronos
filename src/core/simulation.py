@@ -136,7 +136,7 @@ class Simulation:
             
             # Update Gantt chart with process execution
             if self.gantt_update_callback and current_process:
-                self.gantt_update_callback(current_process, self.scheduler.current_time - 1)
+                self.gantt_update_callback(current_process, self.scheduler.current_time)
         
         # Update process table with final state
         if self.process_update_callback:
