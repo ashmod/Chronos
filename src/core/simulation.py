@@ -24,6 +24,21 @@ class Simulation:
         self.gantt_update_callback = None
         self.stats_update_callback = None
         self.current_time = 0
+    
+    def has_results(self):
+        """
+        Check if the simulation has any results that can be exported.
+        
+        Returns:
+            bool: True if any processes have been completed, False otherwise
+        """
+        if not self.scheduler or not self.scheduler.processes:
+            return False
+            
+        # Check if simulation has started processing any processes
+        return self.scheduler.current_time > 0 or len(self.scheduler.completed_processes) > 0 or any(
+            process.start_time is not None for process in self.scheduler.processes
+        )
         
     def set_process_update_callback(self, callback: Callable[[List[Process], int], None]):
         """Set the callback function for updating process information."""

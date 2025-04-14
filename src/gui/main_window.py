@@ -647,7 +647,7 @@ class MainWindow(QMainWindow):
         
     def apply_styles(self, dark_mode):
         """Apply styling to the application based on the selected theme."""
-        if dark_mode:
+        if (dark_mode):
             # Dark theme
             app = QApplication.instance()
             app.setStyle(QStyleFactory.create("Fusion"))
@@ -1302,70 +1302,225 @@ class MainWindow(QMainWindow):
         
     def on_import_processes(self):
         """Import processes from a CSV file."""
+        # Open file dialog to select CSV file
         file_path, _ = QFileDialog.getOpenFileName(
-            self, "Import Processes", "", "CSV Files (*.csv);;All Files (*)"
+            self, 
+            "Import Processes", 
+            "", 
+            "CSV Files (*.csv);;All Files (*)"
         )
         
         if not file_path:
             return
             
         try:
-            # For now, just show a placeholder message
-            # In a real implementation, we would parse the CSV and add processes
-            QMessageBox.information(
+            # Read CSV file
+            import csv
+            with open(file_path, 'r') as file:
+                reader = csv.reader(file)
+                header = next(reader)  # Skip header row
+                
+                # Check if header is correct
+                expected_header = ["Process Name", "Arrival Time", "Burst Time", "Priority"]
+                if not all(h in header for h in expected_header[:3]):  # Priority might be optional
+                    QMessageBox.warning(
+                        self, 
+                        "Invalid CSV Format", 
+                        "CSV file must have columns: Process Name, Arrival Time, Burst Time, and optionally Priority."
+                    )
+                    return
+                    
+                # Remove all existing processes
+                self.on_remove_all()
+                
+                # Reset process counter
+                self.process_control.process_count = 0
+                
+                # Add processes from CSV
+                for row in reader:
+                    if len(row) >= 3:  # Need at least 3 columns (name, arrival, burst)
+                        name = row[0]
+                        arrival_time = int(row[1])
+                        burst_time = int(row[2])
+                        priority = int(row[3]) if len(row) > 3 else 0
+                        
+                        # Create and add process
+                        process = Process(
+                            pid=self.process_control.process_count,
+                            name=name,
+                            arrival_time=arrival_time,
+                            burst_time=burst_time,
+                            priority=priority
+                        )
+                        
+                        self.simulation.add_process(process)
+                        self.process_control.next_process_name()
+                        
+                # Show success message
+                self.statusBar().showMessage(f"Imported {len(self.simulation.scheduler.processes)} processes from {file_path}", 5000)
+                
+        except Exception as e:
+            QMessageBox.critical(
                 self, 
-                "Import Processes", 
-                f"CSV import from '{file_path}' would be processed here."
+                "Import Error", 
+                f"Failed to import processes: {str(e)}"
             )
             
-            # Example of actual implementation (pseudo-code):
-            # with open(file_path, 'r') as f:
-            #     for line in f.readlines():
-            #         name, arrival, burst, priority = line.strip().split(',')
-            #         process = Process(...)
-            #         self.simulation.add_process(process)
-                    
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to import processes: {str(e)}")
-        
     def on_export_results(self):
-        """Export simulation results to a file."""
+        """Export simulation results to a CSV file."""
+        # Check if there are results to export
+        if not self.simulation or not self.simulation.has_results():
+            QMessageBox.warning(
+                self,
+                "Nothing to Export",
+                "There are no simulation results to export. Please run the simulation first."
+            )
+            return
+            
+        # Open file dialog to save CSV file
         file_path, _ = QFileDialog.getSaveFileName(
-            self, "Export Results", "", "CSV Files (*.csv);;Text Files (*.txt);;All Files (*)"
+            self,
+            "Export Results",
+            "",
+            "CSV Files (*.csv);;All Files (*)"
         )
         
         if not file_path:
             return
             
         try:
-            # For now, just show a placeholder message
-            # In a real implementation, we would export results to the file
-            QMessageBox.information(
-                self, 
-                "Export Results", 
-                f"Results would be exported to '{file_path}'."
-            )
+            # Add .csv extension if not already present
+            if not file_path.lower().endswith('.csv'):
+                file_path += '.csv'
+                
+            # Get all processes (both running and completed)
+            all_processes = self.simulation.scheduler.processes + self.simulation.scheduler.completed_processes
             
-            # Example of actual implementation (pseudo-code):
-            # with open(file_path, 'w') as f:
-            #     f.write("Process,Arrival,Burst,Priority,Waiting,Turnaround\n")
-            #     for process in self.simulation.scheduler.processes:
-            #         f.write(f"{process.name},{process.arrival_time},{process.burst_time},{process.priority},{process.waiting_time},{process.turnaround_time}\n")
+            # Remove duplicates (a process might be in both lists)
+            process_dict = {process.pid: process for process in all_processes}
+            processes = list(process_dict.values())
+            
+            # Sort by process ID
+            processes.sort(key=lambda p: p.pid)
+            
+            # Get scheduler type
+            scheduler_name = self.scheduler_control.scheduler_combo.currentText()
+            
+            # Get time quantum for Round Robin
+            time_quantum = None
+            if isinstance(self.current_scheduler, RoundRobinScheduler):
+                time_quantum = self.scheduler_control.time_quantum_spinbox.value()
+            
+            # Write CSV file
+            import csv
+            import time  # Added for timestamp in export
+            with open(file_path, 'w', newline='') as file:
+                writer = csv.writer(file)
+                
+                # Write header with scheduler info
+                writer.writerow(["CPU Scheduler Simulation Results"])
+                writer.writerow([f"Scheduler: {scheduler_name}"])
+                if time_quantum is not None:
+                    writer.writerow([f"Time Quantum: {time_quantum}"])
+                writer.writerow([])
+                
+                # Write process data header
+                writer.writerow([
+                    "Process ID", 
+                    "Process Name", 
+                    "Arrival Time", 
+                    "Burst Time", 
+                    "Priority",
+                    "Start Time", 
+                    "Completion Time",  # Changed from "Finish Time" to "Completion Time" 
+                    "Turnaround Time", 
+                    "Waiting Time", 
+                    "Response Time"
+                ])
+                
+                # Write process data
+                for process in processes:
+                    # Calculate response time (time from arrival to first CPU burst)
+                    response_time = "-"
+                    if process.start_time is not None:
+                        response_time = process.start_time - process.arrival_time
                     
+                    # Handle cases where process hasn't completed yet
+                    completion_time = process.completion_time if process.completion_time is not None else "-"
+                    turnaround_time = process.turnaround_time if process.completion_time is not None else "-"
+                    waiting_time = process.waiting_time if process.completion_time is not None else "-"
+                    
+                    writer.writerow([
+                        process.pid,
+                        process.name,
+                        process.arrival_time,
+                        process.burst_time,
+                        process.priority,
+                        process.start_time if process.start_time is not None else "-",
+                        completion_time,  # Using completion_time consistently
+                        turnaround_time,
+                        waiting_time,
+                        response_time
+                    ])
+                
+                # Write average metrics
+                writer.writerow([])
+                avg_waiting, avg_turnaround = self.simulation.scheduler.calculate_metrics()
+                writer.writerow(["Average Waiting Time:", f"{avg_waiting:.2f}"])
+                writer.writerow(["Average Turnaround Time:", f"{avg_turnaround:.2f}"])
+                
+                # Calculate and write average response time and throughput
+                completed_processes = [p for p in processes if p.completion_time is not None]
+                if completed_processes:
+                    # Calculate average response time
+                    response_times = [(p.start_time - p.arrival_time) for p in completed_processes 
+                                     if p.start_time is not None]
+                    if response_times:
+                        avg_response = sum(response_times) / len(response_times)
+                        writer.writerow(["Average Response Time:", f"{avg_response:.2f}"])
+                    
+                    # Calculate throughput
+                    max_completion_time = max(p.completion_time for p in completed_processes)
+                    if max_completion_time > 0:
+                        throughput = len(completed_processes) / max_completion_time
+                        writer.writerow(["Throughput:", f"{throughput:.4f} processes/time unit"])
+                
+                # Add system settings
+                writer.writerow([])
+                writer.writerow(["Simulation Settings:"])
+                writer.writerow(["Simulation Speed:", f"{self.scheduler_control.speed_slider.value()}x"])
+                writer.writerow(["Export Date:", time.strftime("%Y-%m-%d %H:%M:%S")])
+            
+            # Show success message
+            self.statusBar().showMessage(f"Results exported to {file_path}", 5000)
+            
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to export results: {str(e)}")
+            QMessageBox.critical(
+                self,
+                "Export Error",
+                f"Failed to export results: {str(e)}"
+            )
             
     def on_about(self):
         """Show the about dialog."""
         QMessageBox.about(
             self,
             "About CPU Scheduler Simulation",
-            """<html>
-            <h1 style="color: #2196F3;">CPU Scheduler Simulation</h1>
-            <p>A visualization tool for CPU scheduling algorithms.</p>
-            <p>Developed for ASU Senior Project - Operating Systems</p>
-            <p>Version 2.0 - April 2025</p>
-            </html>"""
+            """
+            <h2>CPU Scheduler Simulation</h2>
+            <p>An interactive tool for learning and visualizing CPU scheduling algorithms.</p>
+            <p>Algorithms implemented:</p>
+            <ul>
+                <li>First-Come, First-Served (FCFS)</li>
+                <li>Shortest Job First (Non-Preemptive)</li>
+                <li>Shortest Job First (Preemptive)</li>
+                <li>Priority (Non-Preemptive)</li>
+                <li>Priority (Preemptive)</li>
+                <li>Round Robin</li>
+            </ul>
+            <p>Created as part of ASU Senior Project for Operating Systems course.</p>
+            <p>© 2025 ASU Operation Systems Team</p>
+            """
         )
         
     def closeEvent(self, event):

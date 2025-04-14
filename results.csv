@@ -1,0 +1,25 @@
+CPU Scheduler Simulation Results
+"Scheduler: First-Come, First-Served (FCFS)"
+
+Process ID,Process Name,Arrival Time,Burst Time,Priority,Start Time,Completion Time,Turnaround Time,Waiting Time,Response Time
+0,Process 1,0,5,0,0,5,5,0,0
+1,Process 2,0,5,0,5,10,10,5,5
+2,Process 3,0,5,0,10,15,15,10,10
+3,Process 4,0,5,0,15,20,20,15,15
+4,Process 5,0,5,0,20,25,25,20,20
+5,Process 6,0,5,0,25,30,30,25,25
+6,Process 7,0,5,0,30,35,35,30,30
+7,Process 8,0,5,0,35,40,40,35,35
+8,Process 9,0,5,0,40,45,45,40,40
+9,Process 10,0,5,0,45,50,50,45,45
+10,Process 11,0,5,0,50,55,55,50,50
+11,Process 12,0,5,0,55,60,60,55,55
+
+Average Waiting Time:,27.50
+Average Turnaround Time:,32.50
+Average Response Time:,27.50
+Throughput:,0.2000 processes/time unit
+
+Simulation Settings:
+Simulation Speed:,1x
+Export Date:,2025-04-14 14:17:40
