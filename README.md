@@ -74,13 +74,13 @@ The executable will be created in the `dist` folder.
 
 ## Team Members
 
-- [Member 1]
-- [Member 2]
-- [Member 3]
-- [Member 4]
-- [Member 5]
-- [Member 6]
+- [Shehab Mahmoud](https://github.com/dizzydroid)
+- [Abdelrahman Hany](https://github.com/DopeBiscuit)
+- [Youssef Shahean](https://github.com/unauthorised-401)
+- [Seif Ahmed](https://github.com/seifelwarwary)
+- [Seif Tamer](https://github.com/SeifT101)
+- [Omar Mamon](https://github.com/Spafic)
 
 ## License
 
-[Specify the license]
+[MIT License](./LICENSE)
