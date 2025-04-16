@@ -103,26 +103,70 @@ class StatsWidget(QWidget):
         # Add stretch to push everything to the top
         layout.addStretch()
         
-    def update_stats(self, avg_waiting: float, avg_turnaround: float):
-        """Update statistics display."""
+    def update_stats(self, avg_waiting: float, avg_turnaround: float, simulation=None):
+        """
+        Update statistics display.
+        
+        Args:
+            avg_waiting (float): Average waiting time
+            avg_turnaround (float): Average turnaround time
+            simulation (Simulation, optional): The simulation object to get more detailed stats
+        """
         self.avg_waiting_label.setText(f"{avg_waiting:.2f}")
         self.avg_turnaround_label.setText(f"{avg_turnaround:.2f}")
         
-        # Calculate and update response time (can be derived or provided separately)
-        # For now, just use a placeholder calculation
-        response_time = avg_waiting * 0.75  # Placeholder calculation
-        self.avg_response_label.setText(f"{response_time:.2f}")
+        # Calculate proper response time
+        avg_response = 0.0
+        completed_count = 0
+        total_burst_time = 0
+        busy_time = 0
+        current_time = 0
         
-        # Calculate throughput if we have processes
-        if avg_turnaround > 0:
-            throughput = 1 / avg_turnaround
+        if simulation:
+            # Get all processes (both running and completed)
+            all_processes = simulation.scheduler.processes + simulation.scheduler.completed_processes
+            
+            # Calculate response time
+            response_times = []
+            for process in all_processes:
+                if process.start_time is not None and process.arrival_time is not None:
+                    # Response time = time first scheduled - arrival time
+                    response_times.append(process.start_time - process.arrival_time)
+                    
+                    # Add to total burst time for CPU utilization
+                    total_burst_time += process.burst_time
+                    
+                    # For CPU utilization calculation - total time processes have been running
+                    for start, end in process.execution_history:
+                        busy_time += (end - start)
+                        
+            # Calculate average response time if we have data
+            if response_times:
+                avg_response = sum(response_times) / len(response_times)
+                
+            # Count completed processes for throughput
+            completed_count = len(simulation.scheduler.completed_processes)
+            
+            # Get current simulation time
+            current_time = simulation.scheduler.current_time
+        
+        # Update response time display
+        self.avg_response_label.setText(f"{avg_response:.2f}")
+        
+        # Calculate and update throughput (completed processes / simulation time)
+        if current_time > 0:
+            throughput = completed_count / current_time
             self.throughput_label.setText(f"{throughput:.2f} processes/unit time")
+        else:
+            self.throughput_label.setText("0.00 processes/unit time")
         
-        # Update CPU utilization (placeholder for now)
-        # In a real implementation, this would be calculated from process data
-        if avg_turnaround > 0:
-            utilization = min(100, 80 + avg_waiting * 2)  # Placeholder calculation
-            self.cpu_label.setText(f"{int(utilization)}%")
+        # Calculate and update CPU utilization
+        # CPU utilization = (busy time / total simulation time) * 100%
+        if current_time > 0:
+            cpu_utilization = (busy_time / current_time) * 100
+            self.cpu_label.setText(f"{int(cpu_utilization)}%")
+        else:
+            self.cpu_label.setText("0%")
 
 class ProcessControlWidget(QWidget):
     """Widget for process control."""
@@ -1298,7 +1342,7 @@ class MainWindow(QMainWindow):
             avg_waiting (float): Average waiting time
             avg_turnaround (float): Average turnaround time
         """
-        self.stats_widget.update_stats(avg_waiting, avg_turnaround)
+        self.stats_widget.update_stats(avg_waiting, avg_turnaround, self.simulation)
         
     def on_import_processes(self):
         """Import processes from a CSV file."""
