@@ -514,7 +514,17 @@ class MainWindow(QMainWindow):
         self.main_splitter.setHandleWidth(2)
         self.main_splitter.setChildrenCollapsible(False)
         
-        # Left side panel with controls in a splitter
+        # Left side panel with controls in a splitter with scroll support
+        self.left_scroll_area = QScrollArea()
+        self.left_scroll_area.setWidgetResizable(True)
+        self.left_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.left_scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.left_scroll_area.setFrameShape(QFrame.NoFrame)  # Hide the border
+        
+        left_scroll_content = QWidget()
+        left_scroll_layout = QVBoxLayout(left_scroll_content)
+        
+        # Left panel with controls in a splitter
         self.left_panel = QSplitter(Qt.Vertical)
         self.left_panel.setHandleWidth(2)
         self.left_panel.setChildrenCollapsible(False)
@@ -531,7 +541,11 @@ class MainWindow(QMainWindow):
         self.stats_widget = StatsWidget()
         self.left_panel.addWidget(self.stats_widget)
         
-        # Right side with tabs
+        # Add left panel to scroll area
+        left_scroll_layout.addWidget(self.left_panel)
+        self.left_scroll_area.setWidget(left_scroll_content)
+        
+        # Right side with tabs (with scroll support)
         self.right_panel = QTabWidget()
         self.right_panel.setTabPosition(QTabWidget.North)
         self.right_panel.setDocumentMode(True)
@@ -555,7 +569,7 @@ class MainWindow(QMainWindow):
         self.right_panel.addTab(gantt_widget, "Gantt Chart")
         
         # Add panels to main splitter
-        self.main_splitter.addWidget(self.left_panel)
+        self.main_splitter.addWidget(self.left_scroll_area)
         self.main_splitter.addWidget(self.right_panel)
         
         # Set initial sizes (left panel gets 1/3, right panel gets 2/3)
@@ -639,7 +653,8 @@ class MainWindow(QMainWindow):
         self.sun_icon = QIcon(sun_icon_path)
         self.moon_icon = QIcon(moon_icon_path)
         
-        # Set initial icon based on theme
+        # Set initial icon based on theme - sun for dark mode, moon for light mode
+        # This is the correct way: show sun in dark mode (to switch to light) and moon in light mode (to switch to dark)
         self.theme_button.setIcon(self.sun_icon if self.dark_mode else self.moon_icon)
         self.theme_button.setText("Light Mode" if self.dark_mode else "Dark Mode")
         self.theme_button.setIconSize(QSize(24, 24))
@@ -1067,6 +1082,11 @@ class MainWindow(QMainWindow):
     def toggle_theme(self, state):
         """Toggle between light and dark theme."""
         self.dark_mode = not state  # Invert because the action/button text says "Light Mode" when in dark mode
+        
+        # Update the icon based on the new theme
+        self.theme_button.setIcon(self.sun_icon if self.dark_mode else self.moon_icon)
+        
+        # Apply styles for the theme
         self.apply_styles(self.dark_mode)
     
     def on_speed_changed(self, value):

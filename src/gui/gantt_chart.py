@@ -23,9 +23,11 @@ class GanttChart(QWidget):
         self.current_time = 0
         self.max_time_displayed = 20  # Initial maximum time to display
         self.time_scale = 40  # Pixels per time unit - increased for better visibility
-        self.row_height = 70  # Height of each process row - increased from 45 to 70
-        self.header_height = 60  # Height of the timeline header - increased from 50 to 60
-        self.left_margin = 180  # Width of the area for process names - increased from 150 to 180
+        self.row_height = 70  # Height of each process row
+        self.header_height = 150  # Significantly increased to eliminate any overlap issues
+        self.title_height = 30   # Height for the title section
+        self.axis_height = 80    # Height for the axis and labels section
+        self.left_margin = 180  # Width of the area for process names
         self.timeline: List[Tuple[Process, int, int]] = []  # List of (process, start_time, end_time) tuples
         self.colors: Dict[int, QColor] = {}  # Dict mapping process IDs to colors
         self.process_colors = [
@@ -43,6 +45,7 @@ class GanttChart(QWidget):
         self.dark_mode = True  # Default to dark mode
         self.highlighted_pid = None  # Currently highlighted process
         self.time_offset = 0  # Initialize the time offset to track the first process start time
+        self.last_process_end_time = 0  # Track the end time of the last process for accurate timing
         
         # Setup UI
         self.setup_ui()
@@ -71,6 +74,7 @@ class GanttChart(QWidget):
         self.highlighted_pid = None
         self.max_time_displayed = 20
         self.time_offset = 0  # Reset the time offset
+        self.last_process_end_time = 0  # Reset the last process end time
         self.update()  # Trigger a repaint
         
     def update_chart(self, current_process: Optional[Process], current_time: int):
@@ -105,17 +109,25 @@ class GanttChart(QWidget):
                 # Extend the current execution period
                 _, start, _ = self.timeline[-1]
                 self.timeline[-1] = (current_process, start, adjusted_time + 1)
+            
+            # Update the last process end time to ensure current time is accurate
+            self.last_process_end_time = adjusted_time + 1
         
-        self.current_time = adjusted_time
+        # CRITICAL FIX: Set current time to match the actual process execution time
+        # Use the latest of: adjusted input time and last process end time
+        self.current_time = max(adjusted_time, self.last_process_end_time)
         
-        # Automatically adjust displayed time range if needed
-        self.max_time_displayed = max(self.max_time_displayed, adjusted_time + 5)
+        # Force immediate repaint to update the current time indicator
+        # This ensures the timeline updates synchronously with processes
+        self.update()
         
-        # Keep time scale constant regardless of time length
-        # This addresses the requirement to show sec by sec and not zoom out
+        # Automatically adjust displayed time range with more room ahead
+        # This ensures we can always see what's coming next
+        self.max_time_displayed = max(self.max_time_displayed, self.current_time + 10)
+        
+        # Maintain fixed time scale to ensure consistent visual representation
+        # This prevents unwanted zooming/scaling during execution
         self.time_scale = 40
-        
-        self.update()  # Trigger a repaint
         
     def set_dark_mode(self, enabled: bool):
         """Enable or disable dark mode."""
@@ -217,58 +229,194 @@ class GanttChart(QWidget):
             
     def _draw_timeline(self, painter: QPainter, text_color: QColor):
         """
-        Draw the timeline axis.
+        Draw the timeline axis with a completely redesigned layout.
         
         Args:
             painter (QPainter): The painter to use
             text_color (QColor): Color to use for text
         """
-        # Set pen and font for timeline
-        painter.setPen(QPen(text_color, 1))
-        painter.setFont(QFont("Arial", 10))  # Increased font size from 9 to 10
+        # Calculate section positions
+        title_y = 15  # Top position for title
+        labels_y = 65  # Position for time labels
+        axis_y = 110  # Position for the axis line
         
-        # Draw timeline axis
-        axis_y = self.header_height - 15  # Adjusted to accommodate taller header
+        # Draw a separator line between the header and chart content
+        separator_pen = QPen(QColor(100, 100, 100) if self.dark_mode else QColor(200, 200, 200), 1)
+        painter.setPen(separator_pen)
+        painter.drawLine(0, self.header_height - 1, self.width(), self.header_height - 1)
+        
+        # Draw decorative separator between title and time labels
+        if self.dark_mode:
+            decorator_gradient = QLinearGradient(0, 40, self.width(), 40)
+            decorator_gradient.setColorAt(0.0, QColor(45, 45, 50, 0))
+            decorator_gradient.setColorAt(0.3, QColor(72, 161, 255, 100))
+            decorator_gradient.setColorAt(0.5, QColor(72, 161, 255, 160))
+            decorator_gradient.setColorAt(0.7, QColor(72, 161, 255, 100))
+            decorator_gradient.setColorAt(1.0, QColor(45, 45, 50, 0))
+        else:
+            decorator_gradient = QLinearGradient(0, 40, self.width(), 40)
+            decorator_gradient.setColorAt(0.0, QColor(240, 240, 245, 0))
+            decorator_gradient.setColorAt(0.3, QColor(25, 118, 210, 60))
+            decorator_gradient.setColorAt(0.5, QColor(25, 118, 210, 100))
+            decorator_gradient.setColorAt(0.7, QColor(25, 118, 210, 60))
+            decorator_gradient.setColorAt(1.0, QColor(240, 240, 245, 0))
+        
+        decorator_pen = QPen(QBrush(decorator_gradient), 1)
+        painter.setPen(decorator_pen)
+        painter.drawLine(10, 40, self.width() - 10, 40)
+        
+        # Create a title "banner" across the entire width for better visibility
+        title_banner_rect = QRect(0, 5, self.width(), 35)
+        
+        # Create an attractive background gradient for the title banner
+        if self.dark_mode:
+            title_banner_gradient = QLinearGradient(0, 5, self.width(), 40)
+            title_banner_gradient.setColorAt(0.0, QColor(35, 35, 40))
+            title_banner_gradient.setColorAt(0.5, QColor(45, 45, 55))
+            title_banner_gradient.setColorAt(1.0, QColor(35, 35, 40))
+        else:
+            title_banner_gradient = QLinearGradient(0, 5, self.width(), 40)
+            title_banner_gradient.setColorAt(0.0, QColor(230, 230, 235))
+            title_banner_gradient.setColorAt(0.5, QColor(240, 240, 245))
+            title_banner_gradient.setColorAt(1.0, QColor(230, 230, 235))
+            
+        painter.fillRect(title_banner_rect, title_banner_gradient)
+        
+        # Add a subtle highlight line at the top
+        highlight_color = QColor(72, 161, 255, 150) if self.dark_mode else QColor(25, 118, 210, 100)
+        painter.setPen(highlight_color)
+        painter.drawLine(0, 5, self.width(), 5)
+        
+        # Draw title text with shadow effect for better visibility
+        title_rect = QRect(int(self.width() / 2 - 150), title_y, 300, 25)
+        painter.setFont(QFont("Arial", 14, QFont.Bold))
+        
+        # Draw shadow
+        shadow_color = QColor(0, 0, 0, 100) if self.dark_mode else QColor(0, 0, 0, 60)
+        painter.setPen(shadow_color)
+        painter.drawText(title_rect.adjusted(2, 2, 2, 2), Qt.AlignCenter, "Timeline (seconds)")
+        
+        # Draw main text
+        title_color = QColor(72, 161, 255) if self.dark_mode else QColor(25, 118, 210)
+        painter.setPen(title_color)
+        painter.drawText(title_rect, Qt.AlignCenter, "Timeline (seconds)")
+        
+        # Draw timeline axis with proper styling
         axis_pen = QPen(text_color, 2)  # Thicker line for better visibility
         painter.setPen(axis_pen)
         painter.drawLine(self.left_margin, axis_y, self.width() - 10, axis_y)
         
-        # Draw time markers and labels (starting from 0)
-        time_step = self._calculate_time_step()  # Always 1 for second-by-second timeline
-        
-        # Calculate how many markers to draw
-        for i in range(0, self.max_time_displayed + time_step + 1, time_step):
+        # Determine optimal time step based on scale and total time
+        if self.time_scale < 20:
+            minor_step = 2   # Show every 2nd tick mark when zoomed out
+            label_step = 10  # Show every 10th label when zoomed out
+        elif self.time_scale < 30:
+            minor_step = 1   # Show every tick mark at medium zoom
+            label_step = 5   # Show every 5th label at medium zoom
+        elif self.time_scale < 60:
+            minor_step = 1   # Show every tick mark when zoomed in
+            label_step = 2   # Show every 2nd label when zoomed in more
+        else:
+            minor_step = 1   # Show every tick mark when zoomed in fully
+            label_step = 1   # Show every label when zoomed in fully
+            
+        # Draw time markers and labels
+        for i in range(0, self.max_time_displayed + 1):
+            # Skip minor ticks based on zoom level
+            if i % minor_step != 0:
+                continue
+                
             x = self.left_margin + i * self.time_scale
             
-            # Draw tick mark - taller for better visibility
-            if i % 5 == 0:  # Larger ticks for multiples of 5
-                painter.setPen(QPen(text_color, 2))  # Thicker line for better visibility
+            # Determine marker importance
+            is_major = (i % 5 == 0)
+            is_labeled = (i % label_step == 0)
+            
+            # Draw tick mark with height based on importance
+            if is_major:  # Major tick (every 5 seconds)
+                painter.setPen(QPen(text_color, 2))
                 painter.drawLine(x, axis_y - 8, x, axis_y + 8)
-                
-                # Draw time label with larger font for multiples of 5
-                painter.setFont(QFont("Arial", 11, QFont.Bold))
-                label_rect = QRect(int(x - 20), 10, 40, 30)
-                painter.drawText(label_rect, Qt.AlignCenter, str(i))
-            else:
+            else:  # Minor tick
                 painter.setPen(QPen(text_color, 1))
-                painter.drawLine(x, axis_y - 5, x, axis_y + 5)
+                painter.drawLine(x, axis_y - 4, x, axis_y + 4)
                 
-                # Draw time label for regular ticks with smaller font
-                painter.setFont(QFont("Arial", 9))
-                label_rect = QRect(int(x - 15), 15, 30, 20)
+            # Draw time label if this point should have a label
+            if is_labeled:
+                # Use different styles for major and minor labels
+                if is_major:  # Major label (every 5 seconds)
+                    painter.setPen(title_color)  # Use same color as title for emphasis
+                    painter.setFont(QFont("Arial", 11, QFont.Bold))
+                    label_rect = QRect(int(x - 20), labels_y - 5, 40, 25)
+                    
+                    # Add subtle background behind major labels
+                    if self.dark_mode:
+                        painter.fillRect(label_rect, QColor(45, 45, 50, 120))
+                    else:
+                        painter.fillRect(label_rect, QColor(240, 240, 245, 160))
+                else:  # Minor label
+                    painter.setPen(text_color)
+                    painter.setFont(QFont("Arial", 9))
+                    label_rect = QRect(int(x - 15), labels_y, 30, 20)
+                
                 painter.drawText(label_rect, Qt.AlignCenter, str(i))
-            
-        # Draw timeline title
-        title_rect = QRect(int(self.width() / 2 - 100), 5, 200, 30)
-        painter.setFont(QFont("Arial", 12, QFont.Bold))  # Larger font for title
         
-        # Apply a nice color to the title
-        if self.dark_mode:
-            painter.setPen(QColor(72, 161, 255))  # A nice blue for dark mode
-        else:
-            painter.setPen(QColor(25, 118, 210))  # A nice blue for light mode
+        # Draw current time indicator if we have processes on the chart
+        if self.timeline:
+            # CRITICAL FIX: Use the actual current time for display
+            # This ensures the timeline marker is positioned correctly
+            display_time = self.current_time  # Already adjusted in update_chart
             
-        painter.drawText(title_rect, Qt.AlignCenter, "Timeline (seconds)")
+            # Calculate the exact position of the current time indicator
+            current_x = self.left_margin + display_time * self.time_scale
+            
+            # Draw a vertical line at current time using gradient
+            # Use a thicker line with solid pattern for better visibility
+            current_grad = QLinearGradient(current_x, self.header_height, current_x, self.height())
+            
+            # Use red gradient for current time indicator with higher opacity
+            if self.dark_mode:
+                current_grad.setColorAt(0.0, QColor(255, 50, 50, 255))
+                current_grad.setColorAt(0.3, QColor(255, 50, 50, 220))
+                current_grad.setColorAt(1.0, QColor(255, 50, 50, 100))
+            else:
+                current_grad.setColorAt(0.0, QColor(255, 50, 50, 255))
+                current_grad.setColorAt(0.3, QColor(255, 50, 50, 220))
+                current_grad.setColorAt(1.0, QColor(255, 50, 50, 100))
+                
+            # Use a thicker line (3px) and solid pattern for better visibility
+            current_pen = QPen(QBrush(current_grad), 3, Qt.SolidLine)
+            painter.setPen(current_pen)
+            painter.drawLine(current_x, self.header_height - 5, current_x, self.height())
+            
+            # Draw current time label in an attractive box
+            time_text = f"Current: {display_time}s"
+            painter.setFont(QFont("Arial", 10, QFont.Bold))
+            text_width = QFontMetrics(painter.font()).width(time_text) + 20
+            
+            # Create rectangle with rounded corners
+            # Position the label higher to avoid overlapping with time labels
+            time_rect = QRectF(current_x - text_width/2, labels_y - 40, text_width, 25)
+            time_path = QPainterPath()
+            time_path.addRoundedRect(time_rect, 8, 8)
+            
+            # Fill with gradient
+            time_grad = QLinearGradient(time_rect.left(), time_rect.top(), time_rect.right(), time_rect.bottom())
+            if self.dark_mode:
+                time_grad.setColorAt(0.0, QColor(180, 40, 40))
+                time_grad.setColorAt(1.0, QColor(130, 30, 30))
+            else:
+                time_grad.setColorAt(0.0, QColor(255, 80, 80))
+                time_grad.setColorAt(1.0, QColor(220, 60, 60))
+                
+            painter.fillPath(time_path, time_grad)
+            
+            # Draw border
+            painter.setPen(QPen(QColor(255, 255, 255, 180), 1.5))
+            painter.drawPath(time_path)
+            
+            # Draw text
+            painter.setPen(Qt.white)
+            painter.drawText(time_rect, Qt.AlignCenter, time_text)
         
     def _draw_process_labels(self, painter: QPainter, text_color: QColor):
         """
