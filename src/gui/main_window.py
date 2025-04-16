@@ -118,8 +118,6 @@ class StatsWidget(QWidget):
         # Calculate proper response time
         avg_response = 0.0
         completed_count = 0
-        total_burst_time = 0
-        busy_time = 0
         current_time = 0
         
         if simulation:
@@ -132,14 +130,7 @@ class StatsWidget(QWidget):
                 if process.start_time is not None and process.arrival_time is not None:
                     # Response time = time first scheduled - arrival time
                     response_times.append(process.start_time - process.arrival_time)
-                    
-                    # Add to total burst time for CPU utilization
-                    total_burst_time += process.burst_time
-                    
-                    # For CPU utilization calculation - total time processes have been running
-                    for start, end in process.execution_history:
-                        busy_time += (end - start)
-                        
+            
             # Calculate average response time if we have data
             if response_times:
                 avg_response = sum(response_times) / len(response_times)
@@ -149,6 +140,37 @@ class StatsWidget(QWidget):
             
             # Get current simulation time
             current_time = simulation.scheduler.current_time
+            
+            # Fixed CPU utilization calculation
+            if current_time > 0:
+                # Create a timeline of CPU usage
+                # For each time unit, track whether CPU was busy or idle
+                timeline = [False] * (current_time + 1)
+                
+                # Mark time units where CPU was busy
+                for process in all_processes:
+                    for start, end in process.execution_history:
+                        # Mark each time unit in this execution period as busy
+                        for t in range(start, min(end, len(timeline))):
+                            timeline[t] = True
+                
+                # Count busy time units
+                busy_time = sum(1 for t in timeline if t)
+                
+                # Calculate utilization based on actual busy time
+                cpu_utilization = (busy_time / current_time) * 100
+                self.cpu_label.setText(f"{int(cpu_utilization)}%")
+                
+                # Update color based on utilization level
+                if cpu_utilization < 50:
+                    self.cpu_label.setStyleSheet("font-size: 28px; font-weight: bold; color: #FFC107;")  # Yellow for low utilization
+                elif cpu_utilization < 80:
+                    self.cpu_label.setStyleSheet("font-size: 28px; font-weight: bold; color: #4CAF50;")  # Green for good utilization
+                else:
+                    self.cpu_label.setStyleSheet("font-size: 28px; font-weight: bold; color: #F44336;")  # Red for high utilization
+            else:
+                self.cpu_label.setText("0%")
+                self.cpu_label.setStyleSheet("font-size: 28px; font-weight: bold; color: #4CAF50;")
         
         # Update response time display
         self.avg_response_label.setText(f"{avg_response:.2f}")
@@ -159,14 +181,6 @@ class StatsWidget(QWidget):
             self.throughput_label.setText(f"{throughput:.2f} processes/unit time")
         else:
             self.throughput_label.setText("0.00 processes/unit time")
-        
-        # Calculate and update CPU utilization
-        # CPU utilization = (busy time / total simulation time) * 100%
-        if current_time > 0:
-            cpu_utilization = (busy_time / current_time) * 100
-            self.cpu_label.setText(f"{int(cpu_utilization)}%")
-        else:
-            self.cpu_label.setText("0%")
 
 class ProcessControlWidget(QWidget):
     """Widget for process control."""
