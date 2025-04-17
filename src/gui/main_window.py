@@ -29,7 +29,7 @@ class SimulationThread(QThread):
     """Thread for running the simulation without blocking the UI."""
     
     # Define signals for thread-safe UI updates
-    process_updated = pyqtSignal(list, int)
+    process_updated = pyqtSignal(object, int)
     gantt_updated = pyqtSignal(object, int)
     stats_updated = pyqtSignal(float, float)
     
@@ -1226,7 +1226,20 @@ class MainWindow(QMainWindow):
         
     def on_reset(self):
         """Reset the simulation."""
+        # Stop any running simulation
         if self.simulation:
+            self.simulation.stop()
+        # Wait for simulation thread to finish
+        if self.simulation_thread and self.simulation_thread.isRunning():
+            self.simulation_thread.wait()
+        # Clear thread reference
+        self.simulation_thread = None
+        # Reset simulation state
+        if self.simulation:
+            # Restore direct UI update callbacks (avoid stale thread signals)
+            self.simulation.set_process_update_callback(self.process_table.update_table)
+            self.simulation.set_gantt_update_callback(self.gantt_chart.update_chart)
+            self.simulation.set_stats_update_callback(self.update_statistics)
             self.simulation.reset()
             
         # Reset process control
