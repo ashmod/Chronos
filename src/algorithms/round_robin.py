@@ -19,10 +19,10 @@ class RoundRobinScheduler(Scheduler):
         """
         super().__init__("Round Robin")
         self.time_quantum = time_quantum
-        self.time_slice = time_quantum  # Override the default time slice
+        self.time_slice = 1  # Set time slice to 1 to control execution more precisely
         self.ready_queue = deque()
         self.current_process = None
-        self.current_process_time = 0
+        self.current_quantum_used = 0  # Track how much of the quantum has been used
     
     def add_process(self, process: Process):
         """
@@ -38,7 +38,7 @@ class RoundRobinScheduler(Scheduler):
         super().reset()
         self.ready_queue = deque()
         self.current_process = None
-        self.current_process_time = 0
+        self.current_quantum_used = 0
         
     def get_next_process(self, current_time) -> Optional[Process]:
         """
@@ -53,31 +53,61 @@ class RoundRobinScheduler(Scheduler):
         # Get all processes that have arrived by the current time and haven't completed
         arrived_processes = self.get_arrived_processes(current_time)
         
-        # Check if any new processes have arrived that are not in the ready queue
+        # Add newly arrived processes to the ready queue
         for process in arrived_processes:
             if process not in self.ready_queue and process != self.current_process:
                 self.ready_queue.append(process)
-        
-        # If current process has used its time quantum or completed, move to the next process
-        if (self.current_process and (
-                self.current_process_time >= self.time_quantum or 
-                self.current_process.is_completed())):
-            
-            # If current process has not completed, add it back to the ready queue
-            if self.current_process and not self.current_process.is_completed():
-                self.ready_queue.append(self.current_process)
                 
-            # Reset current process
-            self.current_process = None
-            self.current_process_time = 0
-        
-        # If there is no current process, get the next one from the queue
+        # If we have a current process, check if it should continue running
+        if self.current_process:
+            # Check if the process has completed
+            if self.current_process.is_completed():
+                self.current_process = None
+                self.current_quantum_used = 0
+            # Check if the quantum has expired
+            elif self.current_quantum_used >= self.time_quantum:
+                # Move the process to the back of the queue if not completed
+                self.ready_queue.append(self.current_process)
+                self.current_process = None
+                self.current_quantum_used = 0
+                
+        # If there's no current process but we have processes in the queue, get the next one
         if not self.current_process and self.ready_queue:
             self.current_process = self.ready_queue.popleft()
-            self.current_process_time = 0
-            
-        # Increment the time the current process has been running
+            self.current_quantum_used = 0
+            # Record the first execution if not already set
+            if self.current_process.start_time is None:
+                self.current_process.start_time = current_time
+                
+        # If we have a current process, increment the quantum counter
         if self.current_process:
-            self.current_process_time += 1
+            self.current_quantum_used += 1
             
         return self.current_process
+
+    def run_tick(self) -> Optional[Process]:
+        """
+        Run a single tick of the simulation.
+        
+        Returns:
+            Optional[Process]: The process that was executed in this tick, or None if CPU was idle
+        """
+        # Get the next process to execute
+        process = self.get_next_process(self.current_time)
+        
+        # If there is a process to execute
+        if process:
+            # Execute the process for one time unit, passing the current time as required
+            process.execute(self.current_time)
+            
+            # If the process has completed
+            if process.is_completed():
+                process.completion_time = self.current_time + 1
+                process.turnaround_time = process.completion_time - process.arrival_time
+                process.waiting_time = process.turnaround_time - process.burst_time
+                self.completed_processes.append(process)
+                
+        # Increment current time
+        self.current_time += 1
+        
+        return process
