@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QMenu
-from PyQt5.QtGui import QPainter, QColor, QBrush, QPen, QFont, QFontMetrics, QPainterPath, QLinearGradient
+from PyQt5.QtGui import QPainter, QColor, QBrush, QPen, QFont, QFontMetrics, QPainterPath, QLinearGradient, QTextDocument
 from PyQt5.QtCore import Qt, QRect, QPointF, QRectF, pyqtSignal
 from typing import List, Dict, Optional, Tuple
 import math
@@ -22,17 +22,17 @@ class GanttChart(QWidget):
         self.processes: List[Process] = []
         self.current_time = 0
         self.max_time_displayed = 20
-        self.time_scale = 35  # Adjusted default scale
-        self.row_height = 60  # Adjusted row height
-        self.header_height = 100 # Adjusted header height
-        self.left_margin = 160  # Adjusted left margin
+        self.time_scale = 40  # Increased default scale for clarity
+        self.row_height = 70  # Increased row height for spacing
+        self.header_height = 60 # Adjusted header height for new design
+        self.left_margin = 210  # Increased left margin further for PIDs
         self.timeline: List[Tuple[Process, int, int]] = []
         self.colors: Dict[int, QColor] = {}
-        # Use the same color palette generation logic if possible, or define consistent colors
+        # Use a slightly more vibrant color palette
         self.process_colors = [
-            QColor("#FF6347"), QColor("#1E90FF"), QColor("#32CD32"), QColor("#FFD700"),
-            QColor("#8A2BE2"), QColor("#FF7F50"), QColor("#00CED1"), QColor("#FF1493"),
-            QColor("#66BB6A"), QColor("#42A5F5") # Match main window colors
+            QColor("#EF5350"), QColor("#42A5F5"), QColor("#66BB6A"), QColor("#FFEE58"),
+            QColor("#AB47BC"), QColor("#FFA726"), QColor("#26C6DA"), QColor("#EC407A"),
+            QColor("#9CCC65"), QColor("#5C6BC0")
         ]
         self.dark_mode = True
         self.highlighted_pid = None
@@ -45,8 +45,8 @@ class GanttChart(QWidget):
         
     def setup_ui(self):
         """Setup the Gantt chart UI."""
-        self.setMinimumHeight(250) # Adjusted minimum height
-        self.setMinimumWidth(600) # Adjusted minimum width
+        self.setMinimumHeight(300) # Increased minimum height
+        self.setMinimumWidth(700) # Increased minimum width
         self.setMouseTracking(True)
         self.setFocusPolicy(Qt.StrongFocus)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -110,16 +110,23 @@ class GanttChart(QWidget):
         
         # Automatically adjust displayed time range with more room ahead
         # This ensures we can always see what's coming next
-        new_max_time = max(self.max_time_displayed, self.current_time + 5)
+        new_max_time = max(self.max_time_displayed, self.current_time + 10) # Increased buffer
         if new_max_time > self.max_time_displayed:
             self.max_time_displayed = new_max_time
             # Adjust minimum width based on max time to ensure scrollbar appears
             # Cast to int to avoid TypeError
-            self.setMinimumWidth(int(self.left_margin + self.max_time_displayed * self.time_scale + 20))
+            self.setMinimumWidth(int(self.left_margin + self.max_time_displayed * self.time_scale + 40)) # Added padding
         
         # Maintain fixed time scale to ensure consistent visual representation
         # This prevents unwanted zooming/scaling during execution
-        self.time_scale = 40
+        # self.time_scale = 40 # Keep scale consistent unless user changes it
+
+        # Update minimum height based on number of processes
+        min_height = int(self.header_height + len(self.processes) * self.row_height + 20)
+        if self.minimumHeight() < min_height:
+            self.setMinimumHeight(min_height)
+
+        self.update() # Trigger repaint
         
     def set_dark_mode(self, enabled: bool):
         """Enable or disable dark mode. Styles are handled in paintEvent."""
@@ -134,46 +141,41 @@ class GanttChart(QWidget):
             event: The paint event
         """
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.Antialiasing) # Ensure smoothness
         
-        # Use color definitions consistent with main_window.py
-        # Define color palettes (simplified version for Gantt chart)
+        # Define color palettes (refined)
         dark_colors = {
-            "window": QColor("#2D2D2D"),
-            "base": QColor("#252525"),
-            "header_bg_start": QColor(45, 45, 50),
-            "header_bg_end": QColor(35, 35, 40),
-            "sidebar_bg_start": QColor(45, 45, 50),
-            "sidebar_bg_end": QColor(40, 40, 45),
-            "text": QColor("#E0E0E0"),
-            "grid": QColor(70, 70, 75),
-            "axis": QColor("#C0C0C0"),
-            "highlight": QColor("#3A7ECF"),
-            "current_time_line": QColor(255, 80, 80, 220),
-            "current_time_bg_start": QColor(180, 40, 40),
-            "current_time_bg_end": QColor(130, 30, 30),
+            "window": QColor("#3C3F41"), # Slightly lighter dark background
+            "base": QColor("#2B2B2B"),
+            "header_bg_start": QColor(60, 63, 65), # Header gradient
+            "header_bg_end": QColor(50, 53, 55),
+            "sidebar_bg_start": QColor(60, 63, 65), # Sidebar gradient
+            "sidebar_bg_end": QColor(55, 58, 60),
+            "text": QColor("#BBBBBB"), # Lighter text for dark mode
+            "grid": QColor(80, 80, 80), # Softer grid lines
+            "axis": QColor("#9E9E9E"), # Clearer axis color
+            "highlight": QColor("#4A90E2"), # Consistent highlight
+            "current_time_line": QColor(255, 87, 34, 230), # Orange current time line
             "current_time_text": Qt.white,
-            "tooltip_bg": QColor(50, 50, 55, 230),
-            "tooltip_text": QColor(220, 220, 220),
+            "tooltip_bg": QColor(43, 43, 43, 240), # Darker tooltip
+            "tooltip_text": QColor(210, 210, 210),
         }
 
         light_colors = {
-            "window": QColor("#F5F5F5"),
-            "base": QColor("#FFFFFF"),
-            "header_bg_start": QColor(240, 240, 245),
-            "header_bg_end": QColor(225, 225, 230),
-            "sidebar_bg_start": QColor(235, 235, 240),
-            "sidebar_bg_end": QColor(225, 225, 230),
-            "text": QColor("#212121"),
-            "grid": QColor(220, 220, 225),
-            "axis": QColor("#555555"),
-            "highlight": QColor("#42A5F5"),
-            "current_time_line": QColor(255, 60, 60, 220),
-            "current_time_bg_start": QColor(255, 80, 80),
-            "current_time_bg_end": QColor(220, 60, 60),
+            "window": QColor("#FFFFFF"), # Clean white background
+            "base": QColor("#FDFDFD"),
+            "header_bg_start": QColor(245, 245, 247), # Light header gradient
+            "header_bg_end": QColor(235, 235, 237),
+            "sidebar_bg_start": QColor(242, 242, 244), # Light sidebar gradient
+            "sidebar_bg_end": QColor(235, 235, 237),
+            "text": QColor("#333333"), # Darker text for light mode
+            "grid": QColor(230, 230, 230), # Subtle grid lines
+            "axis": QColor("#666666"), # Clear axis color
+            "highlight": QColor("#42A5F5"), # Consistent highlight
+            "current_time_line": QColor(255, 87, 34, 220), # Orange current time line
             "current_time_text": Qt.white,
-            "tooltip_bg": QColor(250, 250, 250, 230),
-            "tooltip_text": QColor(30, 30, 30),
+            "tooltip_bg": QColor(255, 255, 255, 240), # White tooltip
+            "tooltip_text": QColor(50, 50, 50),
         }
 
         colors = dark_colors if self.dark_mode else light_colors
@@ -181,29 +183,39 @@ class GanttChart(QWidget):
         # Draw background
         painter.fillRect(event.rect(), colors["window"])
 
-        # Draw header background
-        header_grad = QLinearGradient(0, 0, 0, self.header_height)
+        # Draw header background (Time Axis Area)
+        header_rect = QRectF(0, 0, self.width(), self.header_height)
+        header_grad = QLinearGradient(header_rect.topLeft(), header_rect.bottomLeft())
         header_grad.setColorAt(0, colors["header_bg_start"])
         header_grad.setColorAt(1, colors["header_bg_end"])
-        painter.fillRect(0, 0, self.width(), self.header_height, QBrush(header_grad))
+        painter.fillRect(header_rect, QBrush(header_grad))
+        # Add a subtle bottom border to the header
+        painter.setPen(QPen(colors["grid"], 0.5))
+        painter.drawLine(0, int(self.header_height -1), self.width(), int(self.header_height -1))
 
-        # Draw process names column background
-        sidebar_gradient = QLinearGradient(0, 0, self.left_margin, 0)
+
+        # Draw process names column background (Sidebar Area)
+        sidebar_rect = QRectF(0, 0, self.left_margin, self.height())
+        sidebar_gradient = QLinearGradient(sidebar_rect.topLeft(), sidebar_rect.topRight()) # Horizontal gradient
         sidebar_gradient.setColorAt(0, colors["sidebar_bg_start"])
         sidebar_gradient.setColorAt(1, colors["sidebar_bg_end"])
-        painter.fillRect(0, 0, self.left_margin, self.height(), QBrush(sidebar_gradient))
+        painter.fillRect(sidebar_rect, QBrush(sidebar_gradient))
+        # Add a subtle right border to the sidebar
+        painter.setPen(QPen(colors["grid"], 0.5))
+        painter.drawLine(int(self.left_margin -1), 0, int(self.left_margin -1), self.height())
+
 
         # Draw grid
         self._draw_grid(painter, colors["grid"])
 
-        # Draw timeline
-        self._draw_timeline(painter, colors["text"], colors["axis"], colors["highlight"], colors)
+        # Draw timeline (pass colors dict)
+        self._draw_timeline(painter, colors)
 
-        # Draw process labels
-        self._draw_process_labels(painter, colors["text"], colors["highlight"])
+        # Draw process labels (pass colors dict)
+        self._draw_process_labels(painter, colors)
 
-        # Draw process executions
-        self._draw_executions(painter, colors["text"])
+        # Draw process executions (pass colors dict)
+        self._draw_executions(painter, colors)
 
         # Draw tooltip if hovering over a block
         self._draw_tooltip(painter, colors)
@@ -216,25 +228,25 @@ class GanttChart(QWidget):
             painter (QPainter): The painter to use
             grid_color (QColor): Color to use for grid lines
         """
-        grid_pen = QPen(grid_color, 1, Qt.DotLine)
+        grid_pen = QPen(grid_color, 0.8, Qt.DotLine) # Slightly thicker dots
         painter.setPen(grid_pen)
 
         # Draw vertical grid lines (time markers)
         time_step = self._calculate_time_step()
-        for i in range(0, self.max_time_displayed + time_step, time_step):
+        for i in range(0, int(self.max_time_displayed / time_step) + 2): # Ensure grid covers view
+            time_val = i * time_step
             # Convert float to int to avoid TypeError
-            x = int(self.left_margin + i * self.time_scale)
+            x = int(self.left_margin + time_val * self.time_scale)
             if x < self.left_margin: continue
             # Convert all coordinates to int to match drawLine's signature
             painter.drawLine(x, int(self.header_height), x, int(self.height()))
 
         # Draw horizontal grid lines (process boundaries)
+        painter.setPen(QPen(grid_color, 0.5, Qt.SolidLine)) # Thinner solid line for rows
         for i in range(len(self.processes)):
             # Convert float to int for y coordinate
             y = int(self.header_height + (i + 1) * self.row_height)
             painter.drawLine(int(self.left_margin), y, int(self.width()), y)
-        # Draw line separating labels from chart
-        painter.drawLine(0, int(self.header_height), int(self.width()), int(self.header_height))
         
     def _calculate_time_step(self) -> int:
         """
@@ -252,164 +264,205 @@ class GanttChart(QWidget):
         else:
             return 1
             
-    def _draw_timeline(self, painter: QPainter, text_color: QColor, axis_color: QColor, highlight_color: QColor, colors):
+    def _draw_timeline(self, painter: QPainter, colors: Dict[str, QColor]):
         """
-        Draw the timeline axis with a completely redesigned layout.
+        Draw the timeline axis with improved styling.
         
         Args:
             painter (QPainter): The painter to use
-            text_color (QColor): Color to use for text
+            colors (Dict[str, QColor]): Color palette
         """
-        axis_y = int(self.header_height - 25) # Position axis higher
-        labels_y = int(self.header_height - 45) # Position labels above axis
-        title_y = 10 # Position title at the top
+        axis_y = int(self.header_height - 15) # Position axis lower in header
+        labels_y = int(self.header_height - 35) # Position labels above axis
+        title_y = 10 # Position title near the top
 
-        # Draw Title
-        painter.setFont(QFont("Segoe UI", 12, QFont.Bold))
-        painter.setPen(highlight_color)
-        painter.drawText(QRect(0, title_y, int(self.width()), 30), Qt.AlignCenter, "CPU Execution Timeline")
+        # Draw Title (Optional - can be removed if too cluttered)
+        # painter.setFont(QFont("Segoe UI", 11, QFont.Bold))
+        # painter.setPen(colors["highlight"])
+        # painter.drawText(QRect(int(self.left_margin), title_y, int(self.width() - self.left_margin), 25), Qt.AlignCenter, "Execution Timeline")
 
-        # Draw timeline axis
-        painter.setPen(QPen(axis_color, 1.5))
+        # Draw timeline axis - Thicker and clearer
+        painter.setPen(QPen(colors["axis"], 2)) # Increased thickness
         painter.drawLine(int(self.left_margin), axis_y, int(self.width() - 10), axis_y)
 
         # Determine label step based on time step
         time_step = self._calculate_time_step()
         label_step = time_step
-        if self.time_scale < 10 and time_step == 1: label_step = 5
-        elif self.time_scale < 20 and time_step == 1: label_step = 2
+        # Adjust label frequency based on scale for readability
+        if self.time_scale < 8: label_step = max(5, time_step * 5)
+        elif self.time_scale < 15: label_step = max(2, time_step * 2)
+        elif self.time_scale < 30: label_step = max(1, time_step)
+        else: label_step = time_step
+
 
         # Draw time markers and labels
         painter.setFont(QFont("Segoe UI", 9))
-        for i in range(0, self.max_time_displayed + 1, time_step):
-            x = int(self.left_margin + i * self.time_scale)
-            is_major = (i % max(label_step * 2, 5) == 0) # Make major ticks less frequent
-            is_labeled = (i % label_step == 0)
+        painter.setPen(colors["text"]) # Use standard text color for labels
+
+        for i in range(0, int(self.max_time_displayed / time_step) + 2):
+            time_val = i * time_step
+            x = int(self.left_margin + time_val * self.time_scale)
+            if x < self.left_margin: continue # Skip ticks before the margin
+
+            is_major_tick = (time_val % max(label_step * 2, 5) == 0) # Define major ticks
+            is_labeled = (time_val % label_step == 0)
 
             # Draw tick mark
-            tick_height = 6 if is_major else 3
-            painter.setPen(QPen(axis_color, 1.5 if is_major else 1))
-            painter.drawLine(x, axis_y - tick_height, x, axis_y + tick_height)
+            tick_height = 5 if is_major_tick else 3
+            painter.setPen(QPen(colors["axis"], 1.5 if is_major_tick else 1))
+            painter.drawLine(x, axis_y - tick_height, x, axis_y) # Ticks point upwards
 
             # Draw time label
             if is_labeled:
-                painter.setPen(text_color)
-                label_rect = QRect(int(x - 20), labels_y, 40, 20)
-                painter.drawText(label_rect, Qt.AlignCenter, str(i))
+                painter.setPen(colors["text"])
+                label_rect = QRect(int(x - 25), labels_y, 50, 20) # Wider rect for labels
+                painter.drawText(label_rect, Qt.AlignCenter, str(time_val))
 
         # Draw current time indicator
-        if self.timeline:
+        if self.timeline or self.current_time > 0: # Show even if timeline is empty but time > 0
             display_time = self.current_time
             current_x = int(self.left_margin + display_time * self.time_scale)
 
-            # Draw line
+            # Draw line - Use dedicated color
             painter.setPen(QPen(colors["current_time_line"], 2, Qt.SolidLine))
             painter.drawLine(current_x, int(self.header_height), current_x, int(self.height()))
+
+            # Draw time value above the line in the header
+            time_str = f"{display_time:.1f}s" # Show one decimal place if needed
+            metrics = QFontMetrics(painter.font())
+            time_width = metrics.width(time_str)
+            time_rect = QRect(current_x - time_width // 2 - 5, 5, time_width + 10, 20)
+
+            # Background for time indicator text
+            time_bg_path = QPainterPath()
+            time_bg_path.addRoundedRect(QRectF(time_rect), 3, 3)
+            painter.fillPath(time_bg_path, colors["current_time_line"].darker(120))
+
+            painter.setPen(colors["current_time_text"])
+            painter.drawText(time_rect, Qt.AlignCenter, time_str)
         
-    def _draw_process_labels(self, painter: QPainter, text_color: QColor, highlight_color: QColor):
+    def _draw_process_labels(self, painter: QPainter, colors: Dict[str, QColor]):
         """
-        Draw the process names on the left side.
+        Draw the process names on the left side with improved styling.
         
         Args:
             painter (QPainter): The painter to use
-            text_color (QColor): Color to use for text
+            colors (Dict[str, QColor]): Color palette
         """
-        painter.setPen(text_color)
-
-        # Draw column header
+        # Draw column header ("Processes") - Centered and styled
         painter.setFont(QFont("Segoe UI", 11, QFont.Bold))
-        painter.setPen(highlight_color)
-        painter.drawText(10, self.header_height - 30, self.left_margin - 20, 25, Qt.AlignLeft | Qt.AlignVCenter, "Processes")
+        painter.setPen(colors["highlight"]) # Use highlight color for header
+        header_rect = QRect(0, 0, self.left_margin, self.header_height)
+        painter.drawText(header_rect, Qt.AlignCenter, "Processes")
+
 
         # Draw each process name
-        painter.setFont(QFont("Segoe UI", 10))
+        painter.setFont(QFont("Segoe UI", 10)) # Reset font for process names
         for i, process in enumerate(self.processes):
             y = self.header_height + i * self.row_height
             row_rect = QRect(0, y, self.left_margin, self.row_height)
 
-            # Highlight background if hovered
+            # Highlight background if hovered (Subtle)
             if self.hovered_block and self.hovered_block[0] == process.pid:
-                highlight_bg = QColor(highlight_color)
-                highlight_bg.setAlpha(40)
+                highlight_bg = QColor(colors["highlight"])
+                highlight_bg.setAlpha(30) # More subtle alpha
                 painter.fillRect(row_rect, highlight_bg)
 
-            # Draw process color indicator
-            color_rect = QRect(10, y + self.row_height // 2 - 10, 20, 20)
+            # Draw process color indicator (Larger, centered)
+            indicator_size = 18
+            indicator_y = y + (self.row_height - indicator_size) // 2
+            color_rect = QRect(15, indicator_y, indicator_size, indicator_size) # Indent more
             path = QPainterPath()
-            path.addRoundedRect(QRectF(color_rect), 4, 4)
-            painter.fillPath(path, self.colors.get(process.pid, QColor("gray")))
-            painter.setPen(QPen(text_color.lighter(120) if self.dark_mode else text_color.darker(120), 0.5))
+            path.addRoundedRect(QRectF(color_rect), 5, 5) # More rounded
+
+            process_color = self.colors.get(process.pid, QColor("gray"))
+            painter.fillPath(path, process_color)
+
+            # Add subtle border to indicator
+            border_alpha = 100 if self.dark_mode else 60
+            painter.setPen(QPen(process_color.darker(130), 1))
             painter.drawPath(path)
 
-            # Draw process name and ID
-            painter.setPen(text_color)
+
+            # Draw process name and ID (Better alignment and spacing)
+            painter.setPen(colors["text"])
             process_text = f"{process.name} (P{process.pid})"
-            text_rect = QRect(40, y, self.left_margin - 45, self.row_height)
+            text_x = color_rect.right() + 10 # Space after indicator
+            text_rect = QRect(text_x, y, self.left_margin - text_x - 15, self.row_height) # Adjust width slightly more padding
             painter.drawText(text_rect, Qt.AlignLeft | Qt.AlignVCenter, process_text)
             
-    def _draw_executions(self, painter: QPainter, text_color: QColor):
+    def _draw_executions(self, painter: QPainter, colors: Dict[str, QColor]):
         """
-        Draw the process execution blocks.
+        Draw the process execution blocks with enhanced styling.
         
         Args:
             painter (QPainter): The painter to use
-            text_color (QColor): Color to use for text
+            colors (Dict[str, QColor]): Color palette
         """
         process_indices = {process.pid: i for i, process in enumerate(self.processes)}
+
+        block_padding = 8 # Padding within the row height
+        block_height = self.row_height - 2 * block_padding
 
         for process, start, end in self.timeline:
             if process.pid not in process_indices: continue
 
             row_index = process_indices[process.pid]
-            y = int(self.header_height + row_index * self.row_height)
+            y = int(self.header_height + row_index * self.row_height + block_padding)
             x_start = int(self.left_margin + start * self.time_scale)
             width = int((end - start) * self.time_scale)
 
-            # Ensure minimum width for visibility
-            if width < 1: width = 1
+            # Ensure minimum width for visibility, prevent negative width
+            width = max(1, width)
 
-            block_rect = QRectF(x_start, y + 10, width, self.row_height - 20) # Add padding
+            block_rect = QRectF(x_start, y, width, block_height)
             block_path = QPainterPath()
-            block_path.addRoundedRect(block_rect, 5, 5)
+            # Slightly less rounded corners
+            block_path.addRoundedRect(block_rect, 4, 4)
 
             # Base color
             base_color = self.colors.get(process.pid, QColor("gray"))
 
-            # Apply gradient for 3D effect
+            # Apply subtle gradient
             gradient = QLinearGradient(block_rect.topLeft(), block_rect.bottomLeft())
-            gradient.setColorAt(0, base_color.lighter(120))
-            gradient.setColorAt(1, base_color.darker(120))
+            gradient.setColorAt(0, base_color.lighter(115))
+            gradient.setColorAt(1, base_color) # End with base color
             painter.fillPath(block_path, gradient)
 
-            # Add border
-            border_color = base_color.darker(150)
-            painter.setPen(QPen(border_color, 1))
+            # Add border - subtle and matches base color darkness
+            border_color = base_color.darker(130)
+            painter.setPen(QPen(border_color, 0.8)) # Thinner border
             painter.drawPath(block_path)
 
-            # Highlight if hovered
+            # Highlight if hovered - Use a distinct outline
             is_hovered = (self.hovered_block and
                           self.hovered_block[0] == process.pid and
                           self.hovered_block[1] == start and
                           self.hovered_block[2] == end)
             if is_hovered:
-                painter.setPen(QPen(Qt.white if self.dark_mode else Qt.black, 1.5))
-                painter.drawPath(block_path)
+                highlight_pen = QPen(colors["highlight"], 1.5) # Use theme highlight
+                painter.setPen(highlight_pen)
+                # Draw slightly outside the block for better visibility
+                highlight_rect = block_rect.adjusted(-1, -1, 1, 1)
+                highlight_path = QPainterPath()
+                highlight_path.addRoundedRect(highlight_rect, 5, 5)
+                painter.drawPath(highlight_path)
 
-            # Draw process name inside block if it fits
+
+            # Draw process name inside block if it fits - Improved contrast
             painter.setFont(QFont("Segoe UI", 9, QFont.Bold))
-            text_width = QFontMetrics(painter.font()).width(process.name)
-            if width > text_width + 10:
-                painter.setPen(Qt.white if base_color.lightness() < 128 else Qt.black)
-                painter.drawText(block_rect.adjusted(5, 0, -5, 0), Qt.AlignCenter, process.name)
+            # Use QFontMetrics for integer-based calculations
+            metrics = QFontMetrics(painter.font())
+            text_width = metrics.horizontalAdvance(process.name)
+
+            if width > text_width + 10: # Check if text fits with padding
+                # Choose text color based on background lightness
+                # Use lightness() for integer comparison with QColor
+                text_color = Qt.white if base_color.lightness() < 128 else Qt.black
+                painter.setPen(text_color)
+                # Center text vertically and horizontally within the block
+                painter.drawText(block_rect.toRect(), Qt.AlignCenter, process.name) # Use toRect() for QRect
         
-        # Update widget size to accommodate all processes without scaling down
-        min_height = int(self.header_height + len(self.processes) * self.row_height + 20)
-        min_width = int(self.left_margin + (self.max_time_displayed + 1) * self.time_scale + 20)
-        
-        if self.minimumHeight() < min_height or self.minimumWidth() < min_width:
-            self.setMinimumHeight(min_height)
-            self.setMinimumWidth(min_width)
-            
     def _get_color_for_process(self, pid: int) -> QColor:
         """
         Get a color for a process based on its ID.
@@ -543,7 +596,7 @@ class GanttChart(QWidget):
         
     def _draw_tooltip(self, painter: QPainter, colors):
         """
-        Draw a tooltip if hovering over an execution block.
+        Draw a tooltip with improved styling.
         """
         if not self.hovered_block: return
 
@@ -551,15 +604,20 @@ class GanttChart(QWidget):
         process = next((p for p in self.processes if p.pid == pid), None)
         if not process: return
 
-        tooltip_text = f"{process.name} (P{pid})\nExecuted: {start}s - {end}s\nDuration: {end - start}s"
+        # Tooltip content
+        tooltip_text = f"<b>{process.name} (P{pid})</b><br>" \
+                       f"Executed: {start}s - {end}s<br>" \
+                       f"Duration: {end - start}s"
 
-        painter.setFont(QFont("Segoe UI", 9))
-        # Fix: Move metrics definition before usage
-        metrics = QFontMetrics(painter.font())
-        text_rect = metrics.boundingRect(QRect(), Qt.AlignLeft, tooltip_text)
+        # Use QTextDocument for rich text rendering
+        doc = QTextDocument()
+        doc.setDefaultFont(QFont("Segoe UI", 9))
+        doc.setHtml(tooltip_text)
+        doc.setTextWidth(-1) # Auto width
+        doc_size = doc.size()
 
-        tooltip_width = text_rect.width() + 20
-        tooltip_height = text_rect.height() + 15
+        tooltip_width = doc_size.width() + 20
+        tooltip_height = doc_size.height() + 15
 
         # Position tooltip near the mouse cursor
         pos = self.mapFromGlobal(self.cursor().pos())
@@ -571,14 +629,20 @@ class GanttChart(QWidget):
             tooltip_x = pos.x() - tooltip_width - 15
         if tooltip_y + tooltip_height > self.height():
             tooltip_y = pos.y() - tooltip_height - 10
+        # Ensure tooltip doesn't go off the top or left
+        tooltip_x = max(0, tooltip_x)
+        tooltip_y = max(0, tooltip_y)
+
 
         tooltip_rect = QRectF(tooltip_x, tooltip_y, tooltip_width, tooltip_height)
         tooltip_path = QPainterPath()
-        tooltip_path.addRoundedRect(tooltip_rect, 5, 5)
+        tooltip_path.addRoundedRect(tooltip_rect, 6, 6) # Slightly more rounded
 
-        # Draw background
+        # Draw background with slight transparency
+        painter.setPen(Qt.NoPen) # No border for the tooltip background itself
         painter.fillPath(tooltip_path, colors["tooltip_bg"])
 
-        # Draw text
-        painter.setPen(colors["tooltip_text"])
-        painter.drawText(tooltip_rect.adjusted(10, 7, -10, -8), Qt.AlignLeft, tooltip_text)
+        # Draw text using QTextDocument
+        painter.translate(tooltip_rect.left() + 10, tooltip_rect.top() + 7.5) # Position text inside padding
+        doc.drawContents(painter)
+        painter.translate(-(tooltip_rect.left() + 10), -(tooltip_rect.top() + 7.5)) # Reset translation

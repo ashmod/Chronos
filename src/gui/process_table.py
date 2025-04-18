@@ -1,7 +1,7 @@
-from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView, QProgressBar, QPushButton, QStyle, QHBoxLayout, QWidget
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QColor, QBrush, QFont
-from typing import List
+from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView, QProgressBar, QPushButton, QStyle, QHBoxLayout, QWidget, QLabel, QApplication
+from PyQt5.QtCore import Qt, QSize
+from PyQt5.QtGui import QColor, QBrush, QFont, QIcon, QPainter, QPixmap, QPen, QLinearGradient, QPalette
+from typing import List, Dict
 
 from ..models.process import Process
 
@@ -12,7 +12,8 @@ class ProcessTable(QTableWidget):
     
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.dark_mode = False
+        self.dark_mode = False # Initial state, will be set by MainWindow
+        self.process_colors = {}  # Dictionary to store process colors
         self.setup_ui()
         
     def setup_ui(self):
@@ -21,13 +22,13 @@ class ProcessTable(QTableWidget):
         self.setColumnCount(11)
         headers = ["PID", "Name", "Arrival", "Burst", "Priority",
                    "Progress", "Status", "Waiting", "Turnaround",
-                   "Response", "Actions"] # Remove Action header text
+                   "Response", "Actions"]
         self.setHorizontalHeaderLabels(headers)
         tooltips = ["Process ID", "Process name", "Time when process arrives",
                     "Total CPU burst time", "Process priority (lower is higher)",
                     "Percentage of burst completed", "Current status",
                     "Total waiting time so far", "Turnaround time (completion-arrival)",
-                    "Response time (first CPU start)", "Remove process"] # Update tooltip
+                    "Response time (first CPU start)", "Remove process"]
         for idx, tip in enumerate(tooltips):
             self.horizontalHeaderItem(idx).setToolTip(tip)
         
@@ -41,7 +42,7 @@ class ProcessTable(QTableWidget):
             header.setSectionResizeMode(i, QHeaderView.Interactive) # Reset first
             
         header.setSectionResizeMode(0, QHeaderView.ResizeToContents) # PID
-        header.setSectionResizeMode(1, QHeaderView.Stretch) # Name - Stretch
+        header.setSectionResizeMode(1, QHeaderView.Stretch) # Name - Stretch  
         header.setSectionResizeMode(2, QHeaderView.ResizeToContents) # Arrival
         header.setSectionResizeMode(3, QHeaderView.ResizeToContents) # Burst
         header.setSectionResizeMode(4, QHeaderView.ResizeToContents) # Priority
@@ -50,42 +51,107 @@ class ProcessTable(QTableWidget):
         header.setSectionResizeMode(7, QHeaderView.ResizeToContents) # Waiting
         header.setSectionResizeMode(8, QHeaderView.ResizeToContents) # Turnaround
         header.setSectionResizeMode(9, QHeaderView.ResizeToContents) # Response
-        header.setSectionResizeMode(10, QHeaderView.ResizeToContents) # Action column
+        header.setSectionResizeMode(10, QHeaderView.Fixed) # Action column - Fixed width (FIXED: was incorrectly set to 8)
+        self.setColumnWidth(10, 105) # Increased width for action column to prevent cropping
         
-        # Auto-resize rows to contents
+        # Set relative widths for Name and Progress columns
+        # We use fixed widths for the stretch columns instead of setStretchFactor
+        # This gives us similar control over their relative sizes
+        screen_width = QApplication.desktop().screenGeometry().width()
+        table_width = int(screen_width * 0.6)  # Approximate table width (60% of screen)
+        
+        # Calculate remaining width after fixed columns
+        fixed_columns_width = 0
+        for col in [0, 2, 3, 4, 6, 7, 8, 9, 10]:
+            fixed_columns_width += self.columnWidth(col)
+        
+        remaining_width = table_width - fixed_columns_width
+        name_width = int(remaining_width * 0.4)  # Name gets 40% 
+        progress_width = int(remaining_width * 0.6)  # Progress gets 60%
+        
+        self.setColumnWidth(1, name_width)  # Name column
+        self.setColumnWidth(5, progress_width)  # Progress column
+        
+        # Auto-resize rows to contents but with minimum height for better spacing
         self.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.verticalHeader().setMinimumSectionSize(40) # Increased minimum row height
         self.verticalHeader().setVisible(False) # Hide vertical header (row numbers)
         
         # Make table read-only
         self.setEditTriggers(QTableWidget.NoEditTriggers)
+        
         # Enable sorting by clicking headers
         self.setSortingEnabled(True)
         
-        # Modern styling (most styling is now handled globally)
+        # Basic table properties for modern look
         self.setShowGrid(False) # Cleaner look without internal grid lines
-        self.setAlternatingRowColors(True)
+        self.setAlternatingRowColors(True) # Use alternate base color from theme
         self.setSelectionMode(QTableWidget.SingleSelection)
         self.setSelectionBehavior(QTableWidget.SelectRows)
         self.setFocusPolicy(Qt.NoFocus) # Prevent cell focus outline
         
-        # Increase row padding visually
+        # Set consistent row height
+        self.verticalHeader().setDefaultSectionSize(45)
+        
+        # Set modern styling for the table
         self.setStyleSheet("""
-            QTableView::item { 
-                padding: 15px 5px; /* Vertical padding for row height */
+            QTableWidget {
+                border: none;
+                gridline-color: transparent;
+                outline: none;
             }
-            QHeaderView::section { 
-                padding: 10px 5px; /* Padding for header text */
-                min-height: 30px; /* Minimum height for header sections */
+            QTableWidget::item {
+                padding: 8px;
+                border-bottom: 1px solid rgba(150, 150, 150, 0.1);
+            }
+            QTableWidget::item:selected {
+                background-color: rgba(70, 130, 180, 0.2);
+                color: inherit;
+            }
+            QHeaderView::section {
+                padding: 10px;
+                background-color: rgba(60, 60, 60, 0.05);
+                border: none;
+                border-bottom: 2px solid rgba(70, 130, 180, 0.5);
+                font-weight: bold;
             }
         """)
         
     def set_dark_mode(self, enabled: bool):
-        """Enable or disable dark mode. Styles are mostly global now."""
-        self.dark_mode = enabled
-        # Force re-evaluation of styles if needed, though global stylesheet should handle it
-        self.style().unpolish(self)
-        self.style().polish(self)
-        self.update() # Trigger repaint
+        """
+        Enable or disable dark mode and refresh the table display.
+        
+        Args:
+            enabled (bool): True for dark mode, False for light mode
+        """
+        if self.dark_mode != enabled:
+            self.dark_mode = enabled
+            
+            # Refresh the table if there's data
+            # Get current sorting state
+            sorting_column = self.horizontalHeader().sortIndicatorSection()
+            sorting_order = self.horizontalHeader().sortIndicatorOrder()
+            
+            # Store processes currently displayed
+            processes = []
+            current_time = 0
+            
+            # Find MainWindow and get current processes and time
+            parent = self.parent()
+            while parent:
+                if hasattr(parent, 'simulation') and parent.simulation:
+                    current_time = parent.simulation.current_time
+                    if hasattr(parent.simulation, 'scheduler'):
+                        processes = parent.simulation.scheduler.processes
+                    break
+                parent = parent.parent()
+            
+            # Update the table with current processes
+            if processes:
+                self.update_table(processes, current_time)
+            
+            # Restore sorting
+            self.horizontalHeader().setSortIndicator(sorting_column, sorting_order)
         
     def update_table(self, processes: List[Process], current_time: int):
         """
@@ -107,8 +173,29 @@ class ProcessTable(QTableWidget):
             pid_item.setData(Qt.DisplayRole, process.pid)
             self.setItem(i, 0, pid_item)
             
-            # Name
-            self.setItem(i, 1, QTableWidgetItem(process.name))
+            # Name with color indicator
+            name_widget = QWidget()
+            name_layout = QHBoxLayout(name_widget)
+            name_layout.setContentsMargins(4, 2, 8, 2)
+            
+            # Create color indicator
+            color_indicator = QWidget()
+            color_indicator.setFixedSize(16, 16)
+            color_indicator.setStyleSheet(f"""
+                background-color: {self._get_process_color(process.pid).name()};
+                border-radius: 8px;
+            """)
+            
+            # Create name label
+            name_label = QLabel(process.name)
+            name_label.setStyleSheet("font-weight: normal;")
+            
+            # Add to layout
+            name_layout.addWidget(color_indicator)
+            name_layout.addWidget(name_label, 1)  # 1 = stretch
+            name_layout.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+            
+            self.setCellWidget(i, 1, name_widget)
             
             # Arrival Time (as integer)
             arrival_item = QTableWidgetItem()
@@ -129,22 +216,84 @@ class ProcessTable(QTableWidget):
             progress = QProgressBar()
             progress.setMaximum(process.burst_time)
             progress.setValue(process.burst_time - process.remaining_time)
-            progress.setTextVisible(True) # Show percentage text
-            progress.setFormat(f"{process.burst_time - process.remaining_time}/{process.burst_time}") # Show fraction
-            progress.setAlignment(Qt.AlignCenter)
-            progress.setFixedHeight(20) # Slightly taller progress bar
-            # Styling moved to global stylesheet for consistency
-            self.setCellWidget(i, 5, progress)
             
-            # Set process status
+            # Calculate progress percentage
+            progress_percent = ((process.burst_time - process.remaining_time) / process.burst_time) * 100
+            
+            # Determine color based on progress percentage
+            # Red (0-33%), Orange (34-66%), Green (67-100%)
+            if progress_percent < 33:
+                bar_color = "#FF5252"  # Red
+            elif progress_percent < 66:
+                bar_color = "#FFA726"  # Orange
+            else:
+                bar_color = "#66BB6A"  # Green
+            
+            # Create a custom text label for the progress bar with better visibility
+            fraction_text = f"{process.burst_time - process.remaining_time}/{process.burst_time}"
+            
+            # Set progress bar to not show text - we'll overlay our own text
+            progress.setTextVisible(False)
+            
+            # Enhanced progress bar styling with clear borders
+            progress.setStyleSheet(f"""
+                QProgressBar {{
+                    border: 1.5px solid {'#505050' if self.dark_mode else '#A0A0A0'};
+                    border-radius: 7px;
+                    background-color: {'#2D2D30' if self.dark_mode else '#FFFFFF'};
+                    text-align: center;
+                    min-height: 24px;
+                    max-height: 24px;
+                }}
+                QProgressBar::chunk {{
+                    background-color: {bar_color};
+                    border-radius: 5px;
+                    margin: 2px;
+                }}
+            """)
+            
+            # Create progress widget with overlaid text
+            progress_widget = QWidget()
+            progress_layout = QHBoxLayout(progress_widget)
+            progress_layout.setContentsMargins(8, 2, 8, 2)
+            
+            # Add progress bar
+            progress_layout.addWidget(progress)
+            
+            # Create and add an overlaid label for better text visibility
+            text_label = QLabel(fraction_text)
+            text_label.setAlignment(Qt.AlignCenter)
+            
+            # Instead of using text-shadow which is not supported well in Qt stylesheets,
+            # we'll use a simple solution with bold text and appropriate color
+            text_label.setStyleSheet(f"""
+                font-weight: bold;
+                color: {'white' if self.dark_mode else 'black'};
+                background-color: transparent;
+            """)
+            
+            # Set the label to appear over the progress bar
+            progress_layout.addWidget(text_label)
+            progress_layout.setAlignment(text_label, Qt.AlignCenter)
+            
+            # Use stacked layout effect by setting negative spacing
+            progress_layout.setSpacing(-progress.width())
+            
+            self.setCellWidget(i, 5, progress_widget)
+            
+            # Set process status with color coding
             status = self._get_process_status(process, current_time)
             status_item = QTableWidgetItem(status)
-            status_item.setTextAlignment(Qt.AlignCenter)
             
-            # Status styling moved to global stylesheet for consistency
-            # Add a property to the item for the stylesheet to target
-            status_item.setData(Qt.UserRole, status) # Store status for styling
-                
+            # Color code based on status
+            if status == "Running":
+                status_item.setForeground(QColor("#4CAF50"))  # Green
+            elif status == "Waiting":
+                status_item.setForeground(QColor("#FFC107"))  # Amber/Yellow
+            elif status == "Completed":
+                status_item.setForeground(QColor("#2196F3"))  # Blue
+            
+            status_item.setTextAlignment(Qt.AlignCenter)
             self.setItem(i, 6, status_item)
             
             # Metrics columns (as float/int for sorting)
@@ -166,33 +315,51 @@ class ProcessTable(QTableWidget):
             resp_item.setText(f"{resp_val:.1f}" if resp_val >= 0 else "-")
             self.setItem(i, 9, resp_item)
             
-            # Add Remove button (icon only) in the Action column
-            remove_btn = QPushButton() # No text
-            # Get standard trash icon
-            trash_icon = self.style().standardIcon(QStyle.SP_TrashIcon)
+            # Add Remove button with enhanced styling
+            remove_btn = QPushButton("Remove")  # Added text label
+            trash_icon = self._create_trash_icon(24)  # Slightly smaller icon to fit with text
             remove_btn.setIcon(trash_icon)
-            remove_btn.setCursor(Qt.PointingHandCursor) # Add hover cursor
+            remove_btn.setIconSize(QSize(18, 18))  # Smaller icon size to accommodate text
+            remove_btn.setCursor(Qt.PointingHandCursor)
             remove_btn.setToolTip("Remove Process")
             remove_btn.setProperty("pid", process.pid)
             remove_btn.clicked.connect(self.on_remove_clicked)
-            # Styling moved to global stylesheet
-            remove_btn.setObjectName("remove_table_button") # Set object name for styling
-            remove_btn.setMinimumHeight(30) # Set minimum height for the button
+            remove_btn.setObjectName("remove_table_button")
+            
+            # Modern style for remove button with text
+            remove_btn.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {'rgba(198, 40, 40, 0.1)' if self.dark_mode else 'rgba(211, 47, 47, 0.07)'};
+                    color: {'#FF6E6E' if self.dark_mode else '#D32F2F'};
+                    border: 1px solid {'rgba(255, 110, 110, 0.4)' if self.dark_mode else 'rgba(211, 47, 47, 0.3)'};
+                    border-radius: 4px;
+                    padding: 4px 8px;
+                    font-size: 12px;
+                    min-width: 70px;
+                }}
+                QPushButton:hover {{
+                    background-color: {'rgba(255, 110, 110, 0.2)' if self.dark_mode else 'rgba(211, 47, 47, 0.15)'};
+                    border: 1px solid {'rgba(255, 110, 110, 0.6)' if self.dark_mode else 'rgba(211, 47, 47, 0.5)'};
+                }}
+                QPushButton:pressed {{
+                    background-color: {'rgba(255, 110, 110, 0.3)' if self.dark_mode else 'rgba(211, 47, 47, 0.25)'};
+                }}
+            """)
             
             # Center the button in the cell
             cell_widget = QWidget()
             layout = QHBoxLayout(cell_widget)
+            layout.setContentsMargins(3, 0, 3, 0)  # Reduced horizontal margins
             layout.addWidget(remove_btn)
             layout.setAlignment(Qt.AlignCenter)
-            layout.setContentsMargins(0, 0, 0, 0)
             self.setCellWidget(i, 10, cell_widget)
             
-            # Align text centrally for numerical columns and status
-            for col_idx in [0, 2, 3, 4, 6, 7, 8, 9]:
+            # Align text centrally for numerical columns
+            for col_idx in [0, 2, 3, 4, 7, 8, 9]:
                 item = self.item(i, col_idx)
                 if item:
                     item.setTextAlignment(Qt.AlignCenter)
-        
+                    
         # Add summary row for averages
         completed = [p for p in processes if p.completion_time is not None]
         if completed:
@@ -214,8 +381,7 @@ class ProcessTable(QTableWidget):
             avg_item.setFont(font)
             avg_item.setTextAlignment(Qt.AlignRight | Qt.AlignVCenter) # Align right
             avg_item.setFlags(Qt.ItemIsEnabled)
-            # Add padding to the right of the label
-            avg_item.setData(Qt.UserRole, "summary_label") # For styling
+            avg_item.setData(Qt.UserRole, "summary_label")
             self.setItem(avg_row, 0, avg_item)
             
             # Set average values
@@ -224,15 +390,12 @@ class ProcessTable(QTableWidget):
                 item.setFont(font)
                 item.setTextAlignment(Qt.AlignCenter)
                 item.setFlags(Qt.ItemIsEnabled)
-                item.setData(Qt.UserRole, "summary_value") # For styling
+                item.setData(Qt.UserRole, "summary_value")
                 self.setItem(avg_row, col, item)
             # Disable the action button cell in the summary row
             self.setCellWidget(avg_row, 10, None)
             self.setItem(avg_row, 10, QTableWidgetItem(""))
             self.item(avg_row, 10).setFlags(Qt.ItemIsEnabled)
-            
-            # Set specific height for summary row
-            self.setRowHeight(avg_row, 35)
         
         self.setSortingEnabled(True) # Re-enable sorting
         
@@ -271,3 +434,81 @@ class ProcessTable(QTableWidget):
             return "Running"
         else:
             return "Waiting"
+        
+    def _create_trash_icon(self, size=24):
+        """Create a custom red trash icon (basket) that's filled. Adapts color based on self.dark_mode."""
+        # Define colors - use slightly different shades for dark vs light mode
+        primary_color = "#C62828" if self.dark_mode else "#D32F2F"  # Use theme-appropriate red
+        highlight_color = "#D32F2F" if self.dark_mode else "#E57373"  # Lighter red for highlights
+        
+        # Create a pixmap to draw on
+        pixmap = QPixmap(size, size)
+        pixmap.fill(Qt.transparent)
+        
+        # Create painter
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.Antialiasing)
+        
+        # Draw the trash can body (main basket)
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QColor(primary_color))
+        
+        # Calculate dimensions for the trash can - explicitly convert to int
+        basket_width = int(size * 0.7) # Slightly narrower
+        basket_height = int(size * 0.65)
+        basket_x = int((size - basket_width) / 2)
+        basket_y = int(size * 0.35)  # Start slightly lower
+        
+        # Draw the main body of the trash can (rectangle with rounded corners)
+        painter.drawRoundedRect(basket_x, basket_y, basket_width, basket_height, 2, 2)
+        
+        # Draw the lid of the trash can - explicitly convert to int
+        lid_width = int(basket_width * 1.1) # Slightly wider lid
+        lid_height = int(size * 0.12)
+        lid_x = int((size - lid_width) / 2)
+        lid_y = int(basket_y - lid_height * 0.8) # Position lid closer to body
+        
+        painter.setBrush(QColor(primary_color)) # Lid same color as body
+        painter.drawRoundedRect(lid_x, lid_y, lid_width, lid_height, 1, 1)
+        
+        # Draw the handle on top of the lid - explicitly convert to int
+        handle_width = int(basket_width * 0.3)
+        handle_height = int(lid_height * 0.7)
+        handle_x = int((size - handle_width) / 2)
+        handle_y = int(lid_y - handle_height * 0.7) # Position handle closer
+        
+        painter.drawRoundedRect(handle_x, handle_y, handle_width, handle_height, 1, 1)
+        
+        # Draw some lines on the trash can body using highlight color
+        painter.setPen(QPen(QColor(highlight_color), 1)) # Use highlight color for lines
+        
+        # Draw 2 vertical lines - explicitly convert to int
+        line1_x = int(basket_x + basket_width / 3)
+        line2_x = int(basket_x + (basket_width * 2) / 3)
+        
+        # Make sure line start/end points are also integers
+        line_start_y = basket_y + 3
+        line_end_y = basket_y + basket_height - 3
+        
+        painter.drawLine(line1_x, int(line_start_y), line1_x, int(line_end_y))
+        painter.drawLine(line2_x, int(line_start_y), line2_x, int(line_end_y)) # Fixed missing parenthesis
+        
+        painter.end()
+        
+        return QIcon(pixmap)
+    
+    def set_process_colors(self, process_colors):
+        """Set the process colors dictionary"""
+        self.process_colors = process_colors
+        
+    def _get_process_color(self, pid):
+        """Get the color for a process"""
+        if pid in self.process_colors:
+            return self.process_colors[pid]
+        
+        # Default colors if not found
+        default_colors = [
+            QColor("#FF6347"), QColor("#1E90FF"), QColor("#32CD32"), 
+            QColor("#FFD700"), QColor("#8A2BE2"), QColor("#FF7F50")
+        ]
+        return default_colors[pid % len(default_colors)]

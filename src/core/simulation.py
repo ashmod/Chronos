@@ -119,6 +119,33 @@ class Simulation:
             avg_waiting, avg_turnaround = self.scheduler.calculate_metrics()
             self.stats_update_callback(avg_waiting, avg_turnaround)
             
+    def reset_processes_progress(self):
+        """Reset progress for all processes without removing them."""
+        # Keep all processes but reset their progress
+        for process in self.scheduler.processes:
+            process.reset_progress()
+            
+        # Clear completed processes list but keep them in main processes list
+        self.scheduler.completed_processes.clear()
+        
+    def reset_without_removing_processes(self):
+        """Reset the simulation state without removing processes."""
+        # Reset simulation time
+        self.scheduler.current_time = 0
+        self.current_time = 0
+        
+        # Reset scheduler state but keep processes
+        self.scheduler.reset_state()
+        
+        # Update UI
+        if self.process_update_callback:
+            self.process_update_callback(self.scheduler.processes, self.scheduler.current_time)
+        if self.gantt_update_callback:
+            self.gantt_update_callback(None, self.scheduler.current_time)
+        if self.stats_update_callback:
+            # Reset statistics to zero since we're starting over
+            self.stats_update_callback(0.0, 0.0)
+            
     def start(self):
         """Start the simulation."""
         self.running = True

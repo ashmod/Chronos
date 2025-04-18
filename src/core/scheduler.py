@@ -38,6 +38,12 @@ class Scheduler(ABC):
         for process in self.processes:
             process.reset()
             
+    def reset_state(self):
+        """Reset only the scheduler state without resetting processes."""
+        self.current_time = 0
+        self.current_process = None
+        self.completed_processes = []
+
     def all_processes_completed(self) -> bool:
         """Check if all processes have completed execution."""
         return all(process.is_completed() for process in self.processes)
