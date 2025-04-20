@@ -63,7 +63,7 @@ class Simulation:
         if self.process_update_callback:
             self.process_update_callback(self.scheduler.processes, self.scheduler.current_time)
             
-    def add_live_process(self, name: str, burst_time: int, priority: int, pid: int):
+    def add_live_process(self, name: str, burst_time: int, priority: int, pid: int) -> Process:
         """
         Add a process during simulation execution with arrival time set to current time.
         
@@ -131,7 +131,7 @@ class Simulation:
     def remove_all_processes(self):
         """Remove all processes from the simulation."""
         self.scheduler.processes.clear()
-        self.scheduler.completed_processes.clear()
+        self.scheduler.reset_state()
         
         # Update UI
         if self.process_update_callback:
@@ -245,9 +245,9 @@ class Simulation:
                 
                 # Wait for the specified delay
                 time.sleep(self.delay)
-            else:
+            #else:
                 # If paused, just sleep to avoid consuming CPU
-                time.sleep(0.1)
+                #time.sleep(0.1)
                 
         self.running = False
         

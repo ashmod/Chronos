@@ -1,4 +1,7 @@
-# CPU Scheduler Simulation
+# CHRONOS | The CPU Scheduling Simulator
+<div id="header" align="left">
+ <img src="assets/banner.png">
+</div>
 
 A desktop application that simulates various CPU scheduling algorithms with a live Gantt chart visualization.
 
@@ -18,8 +21,9 @@ A desktop application that simulates various CPU scheduling algorithms with a li
 ## Requirements
 
 - Python 3.6+
-- PyQt5
-- matplotlib
+- PyQt5 >= 5.15.0
+- matplotlib >= 3.5.1
+- pyinstaller >= 5.0.0 (for building executable)
 
 ## Installation
 
@@ -61,16 +65,22 @@ The executable will be created in the `dist` folder.
    - Run All At Once: Complete the simulation instantly
    - Speed: Adjust simulation speed
 
-## Screenshots
-
-(Add screenshots here)
 
 ## Project Structure
 
-- `src/models/`: Process model
-- `src/core/`: Scheduler and simulation logic
-- `src/algorithms/`: Different scheduling algorithms
-- `src/gui/`: User interface components
+- `main.py`: Application entry point
+- `build.py`: Script for building the standalone executable
+- `requirements.txt`: Python dependencies
+- `example_processes.csv`: Sample process data for import
+- `src/`
+  - `models/`: Process data model
+  - `core/`: Scheduler and simulation core logic
+  - `algorithms/`: Implementation of different CPU scheduling algorithms
+  - `gui/`: User interface components
+    - `scenes/`: Different application screens
+    - `resources/`: UI assets
+- `assets/`: Application assets
+- `docs/`: Documentation and resources
 
 ## Team Members
 

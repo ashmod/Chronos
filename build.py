@@ -24,7 +24,7 @@ def build_executable():
         '--name=CPU_Scheduler',
         '--onefile',
         '--windowed',
-        '--icon=docs/icon.ico',  # You'll need to create an icon file
+        '--icon=docs/icon.ico',
         '--add-data=src;src',
         '--clean',
     ])

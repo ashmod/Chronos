@@ -59,7 +59,7 @@ class Scheduler(ABC):
             List[Process]: List of arrived processes that haven't completed
         """
         return [p for p in self.processes 
-                if p.arrival_time <= current_time and not p.is_completed()]
+                if (p.arrival_time <= current_time) and ( not p.is_completed() )]
                 
     def calculate_metrics(self):
         """Calculate and return the average waiting time and turnaround time."""

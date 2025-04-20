@@ -183,7 +183,7 @@ class GanttChart(QWidget):
         self._draw_executions(painter, colors)
 
         # Draw tooltip if hovering over a block
-        self._draw_tooltip(painter, colors)
+        # self._draw_tooltip(painter, colors)
         
     def _draw_grid(self, painter: QPainter, grid_color: QColor):
         """
@@ -605,7 +605,7 @@ class GanttChart(QWidget):
 
         # Draw background with slight transparency
         painter.setPen(Qt.NoPen) # No border for the tooltip background itself
-        painter.fillPath(tooltip_path, colors["tooltip_bg"])
+        # painter.fillPath(tooltip_path, colors["tooltip_bg"])
 
         # Draw text using QTextDocument
         painter.translate(tooltip_rect.left() + 10, tooltip_rect.top() + 7.5) # Position text inside padding

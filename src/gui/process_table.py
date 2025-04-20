@@ -267,13 +267,12 @@ class ProcessTable(QTableWidget):
             # Enhanced text label styling for better visibility in both themes
             # Use bright white in dark mode with stronger shadow
             text_color = "#FFFFFF" if self.dark_mode else "black"
-            text_shadow = "1px 1px 3px #000000, -1px -1px 3px #000000" if self.dark_mode else "none"
+            # text_shadow = "1px 1px 3px #000000, -1px -1px 3px #000000" if self.dark_mode else "none"
             
             text_label.setStyleSheet(f"""
                 font-weight: bold;
                 color: {text_color};
                 background-color: transparent;
-                text-shadow: {text_shadow};
             """)
             
             # Make sure the text label is raised above the progress bar
