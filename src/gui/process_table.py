@@ -223,11 +223,11 @@ class ProcessTable(QTableWidget):
             # Determine color based on progress percentage
             # Red (0-33%), Orange (34-66%), Green (67-100%)
             if progress_percent < 33:
-                bar_color = "#FF5252"  # Red
+                bar_color = "#FF5252" if not self.dark_mode else "#FF7373"  # Red (lighter in dark mode)
             elif progress_percent < 66:
-                bar_color = "#FFA726"  # Orange
+                bar_color = "#FFA726" if not self.dark_mode else "#FFC166"  # Orange (lighter in dark mode)
             else:
-                bar_color = "#66BB6A"  # Green
+                bar_color = "#66BB6A" if not self.dark_mode else "#8EDA91"  # Green (lighter in dark mode)
             
             # Create a custom text label for the progress bar with better visibility
             fraction_text = f"{process.burst_time - process.remaining_time}/{process.burst_time}"
@@ -264,13 +264,21 @@ class ProcessTable(QTableWidget):
             text_label = QLabel(fraction_text)
             text_label.setAlignment(Qt.AlignCenter)
             
-            # Instead of using text-shadow which is not supported well in Qt stylesheets,
-            # we'll use a simple solution with bold text and appropriate color
+            # Enhanced text label styling for better visibility in both themes
+            # Use bright white in dark mode with stronger shadow
+            text_color = "#FFFFFF" if self.dark_mode else "black"
+            text_shadow = "1px 1px 3px #000000, -1px -1px 3px #000000" if self.dark_mode else "none"
+            
             text_label.setStyleSheet(f"""
                 font-weight: bold;
-                color: {'white' if self.dark_mode else 'black'};
+                color: {text_color};
                 background-color: transparent;
+                text-shadow: {text_shadow};
             """)
+            
+            # Make sure the text label is raised above the progress bar
+            text_label.raise_()
+            text_label.setAttribute(Qt.WA_TransparentForMouseEvents)
             
             # Set the label to appear over the progress bar
             progress_layout.addWidget(text_label)
@@ -285,13 +293,16 @@ class ProcessTable(QTableWidget):
             status = self._get_process_status(process, current_time)
             status_item = QTableWidgetItem(status)
             
-            # Color code based on status
+            # Enhanced color coding based on status with better dark/light mode distinction
             if status == "Running":
-                status_item.setForeground(QColor("#4CAF50"))  # Green
+                status_item.setForeground(QColor("#4CAF50") if not self.dark_mode else QColor("#8AFF8E"))
             elif status == "Waiting":
-                status_item.setForeground(QColor("#FFC107"))  # Amber/Yellow
+                status_item.setForeground(QColor("#FFC107") if not self.dark_mode else QColor("#FFD54F"))
             elif status == "Completed":
-                status_item.setForeground(QColor("#2196F3"))  # Blue
+                status_item.setForeground(QColor("#2196F3") if not self.dark_mode else QColor("#64B5F6"))
+            elif status == "Not Arrived":
+                # Make not arrived status more visible in both themes
+                status_item.setForeground(QColor("#9E9E9E") if not self.dark_mode else QColor("#BDBDBD"))
             
             status_item.setTextAlignment(Qt.AlignCenter)
             self.setItem(i, 6, status_item)

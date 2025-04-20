@@ -25,6 +25,7 @@ class Process:
         self.waiting_time = 0
         self.turnaround_time = 0
         self.response_time = None
+        self.first_run_time = None  # Track when process first starts execution
         self.execution_history = []  # List of (start_time, end_time) tuples
         
     def reset(self):
@@ -35,6 +36,7 @@ class Process:
         self.waiting_time = 0
         self.turnaround_time = 0
         self.response_time = None
+        self.first_run_time = None
         self.execution_history = []
         
     def reset_progress(self):
@@ -68,6 +70,10 @@ class Process:
         """
         if self.start_time is None:
             self.start_time = current_time
+            
+        # Track the first time this process runs (for response time)
+        if self.first_run_time is None:
+            self.first_run_time = current_time
             self.response_time = current_time - self.arrival_time
             
         execution_time = min(self.remaining_time, time_quantum)
@@ -82,6 +88,17 @@ class Process:
             self.calculate_waiting_time()
             
         return execution_time
+    
+    def clone(self):
+        """Create a clone of this process."""
+        cloned = Process(
+            pid=self.pid,
+            name=self.name,
+            arrival_time=self.arrival_time,
+            burst_time=self.burst_time,
+            priority=self.priority
+        )
+        return cloned
     
     def __str__(self):
         """String representation of the process."""

@@ -63,6 +63,40 @@ class Simulation:
         if self.process_update_callback:
             self.process_update_callback(self.scheduler.processes, self.scheduler.current_time)
             
+    def add_live_process(self, name: str, burst_time: int, priority: int, pid: int):
+        """
+        Add a process during simulation execution with arrival time set to current time.
+        
+        Args:
+            name (str): Name of the process
+            burst_time (int): Burst time of the process
+            priority (int): Priority of the process
+            pid (int): Process ID
+        
+        Returns:
+            Process: The newly created and added process
+        """
+        # Get the current simulation time
+        current_time = self.scheduler.current_time
+        
+        # Create a new process with arrival time set to current simulation time
+        process = Process(
+            pid=pid,
+            name=name,
+            arrival_time=current_time,
+            burst_time=burst_time,
+            priority=priority
+        )
+        
+        # Add the process to the scheduler
+        self.scheduler.add_process(process)
+        
+        # Update the UI if callback is provided
+        if self.process_update_callback:
+            self.process_update_callback(self.scheduler.processes, current_time)
+            
+        return process
+            
     def remove_process(self, pid: int):
         """
         Remove a process from the simulation by its process ID.
@@ -216,3 +250,90 @@ class Simulation:
                 time.sleep(0.1)
                 
         self.running = False
+        
+    def set_speed(self, speed_factor: int):
+        """
+        Set the simulation speed based on a multiplier.
+        
+        Args:
+            speed_factor (int): Speed multiplier, higher values mean faster simulation
+        """
+        if speed_factor <= 0:
+            self.delay = 0.001  # Minimum delay to prevent division by zero
+        else:
+            self.delay = 1.0 / speed_factor
+            
+    def get_cpu_utilization(self) -> float:
+        """
+        Calculate CPU utilization as the percentage of time the CPU was busy (not idle).
+        
+        Returns:
+            float: CPU utilization as a decimal (0.0 to 1.0)
+        """
+        if not self.scheduler or not self.scheduler.processes:
+            return 0.0
+            
+        # Find the last completion time
+        last_completion = 0
+        for process in self.scheduler.processes:
+            if process.completion_time is not None and process.completion_time > last_completion:
+                last_completion = process.completion_time
+                
+        if last_completion == 0:
+            return 0.0
+            
+        # Calculate total busy time from all process execution periods
+        total_busy_time = 0
+        for process in self.scheduler.processes:
+            for start, end in process.execution_history:
+                total_busy_time += (end - start)
+                
+        # CPU utilization = busy time / total simulation time
+        return min(total_busy_time / last_completion, 1.0)  # Cap at 100%
+        
+    def get_throughput(self) -> float:
+        """
+        Calculate throughput as the number of processes completed per unit of time.
+        
+        Returns:
+            float: Throughput (processes per unit time)
+        """
+        if not self.scheduler or not self.scheduler.processes:
+            return 0.0
+            
+        # Count completed processes
+        completed_count = 0
+        last_completion = 0
+        
+        for process in self.scheduler.processes:
+            if process.completion_time is not None:
+                completed_count += 1
+                if process.completion_time > last_completion:
+                    last_completion = process.completion_time
+                    
+        if last_completion == 0 or completed_count == 0:
+            return 0.0
+            
+        # Throughput = number of processes completed / total time
+        return completed_count / last_completion
+        
+    def get_timeline_entries(self):
+        """
+        Get a list of timeline entries for the Gantt chart.
+        
+        Returns:
+            list: List of tuples (process, start_time, end_time)
+        """
+        entries = []
+        
+        if not self.scheduler or not self.scheduler.processes:
+            return entries
+            
+        for process in self.scheduler.processes:
+            for start, end in process.execution_history:
+                entries.append((process, start, end))
+                
+        # Sort by start time
+        entries.sort(key=lambda x: x[1])
+        
+        return entries

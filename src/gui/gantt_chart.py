@@ -143,51 +143,16 @@ class GanttChart(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing) # Ensure smoothness
         
-        # Define color palettes (refined)
-        dark_colors = {
-            "window": QColor("#3C3F41"), # Slightly lighter dark background
-            "base": QColor("#2B2B2B"),
-            "header_bg_start": QColor(60, 63, 65), # Header gradient
-            "header_bg_end": QColor(50, 53, 55),
-            "sidebar_bg_start": QColor(60, 63, 65), # Sidebar gradient
-            "sidebar_bg_end": QColor(55, 58, 60),
-            "text": QColor("#BBBBBB"), # Lighter text for dark mode
-            "grid": QColor(80, 80, 80), # Softer grid lines
-            "axis": QColor("#9E9E9E"), # Clearer axis color
-            "highlight": QColor("#4A90E2"), # Consistent highlight
-            "current_time_line": QColor(255, 87, 34, 230), # Orange current time line
-            "current_time_text": Qt.white,
-            "tooltip_bg": QColor(43, 43, 43, 240), # Darker tooltip
-            "tooltip_text": QColor(210, 210, 210),
-        }
-
-        light_colors = {
-            "window": QColor("#FFFFFF"), # Clean white background
-            "base": QColor("#FDFDFD"),
-            "header_bg_start": QColor(245, 245, 247), # Light header gradient
-            "header_bg_end": QColor(235, 235, 237),
-            "sidebar_bg_start": QColor(242, 242, 244), # Light sidebar gradient
-            "sidebar_bg_end": QColor(235, 235, 237),
-            "text": QColor("#333333"), # Darker text for light mode
-            "grid": QColor(230, 230, 230), # Subtle grid lines
-            "axis": QColor("#666666"), # Clear axis color
-            "highlight": QColor("#42A5F5"), # Consistent highlight
-            "current_time_line": QColor(255, 87, 34, 220), # Orange current time line
-            "current_time_text": Qt.white,
-            "tooltip_bg": QColor(255, 255, 255, 240), # White tooltip
-            "tooltip_text": QColor(50, 50, 50),
-        }
-
-        colors = dark_colors if self.dark_mode else light_colors
+        colors = self._get_theme_colors()
 
         # Draw background
-        painter.fillRect(event.rect(), colors["window"])
+        painter.fillRect(event.rect(), colors["background"])
 
         # Draw header background (Time Axis Area)
         header_rect = QRectF(0, 0, self.width(), self.header_height)
         header_grad = QLinearGradient(header_rect.topLeft(), header_rect.bottomLeft())
-        header_grad.setColorAt(0, colors["header_bg_start"])
-        header_grad.setColorAt(1, colors["header_bg_end"])
+        header_grad.setColorAt(0, colors["header"])
+        header_grad.setColorAt(1, colors["header"].darker(110))
         painter.fillRect(header_rect, QBrush(header_grad))
         # Add a subtle bottom border to the header
         painter.setPen(QPen(colors["grid"], 0.5))
@@ -197,8 +162,8 @@ class GanttChart(QWidget):
         # Draw process names column background (Sidebar Area)
         sidebar_rect = QRectF(0, 0, self.left_margin, self.height())
         sidebar_gradient = QLinearGradient(sidebar_rect.topLeft(), sidebar_rect.topRight()) # Horizontal gradient
-        sidebar_gradient.setColorAt(0, colors["sidebar_bg_start"])
-        sidebar_gradient.setColorAt(1, colors["sidebar_bg_end"])
+        sidebar_gradient.setColorAt(0, colors["header"])
+        sidebar_gradient.setColorAt(1, colors["header"].darker(110))
         painter.fillRect(sidebar_rect, QBrush(sidebar_gradient))
         # Add a subtle right border to the sidebar
         painter.setPen(QPen(colors["grid"], 0.5))
@@ -282,7 +247,7 @@ class GanttChart(QWidget):
         # painter.drawText(QRect(int(self.left_margin), title_y, int(self.width() - self.left_margin), 25), Qt.AlignCenter, "Execution Timeline")
 
         # Draw timeline axis - Thicker and clearer
-        painter.setPen(QPen(colors["axis"], 2)) # Increased thickness
+        painter.setPen(QPen(colors["axis_label"], 2)) # Increased thickness
         painter.drawLine(int(self.left_margin), axis_y, int(self.width() - 10), axis_y)
 
         # Determine label step based on time step
@@ -309,7 +274,7 @@ class GanttChart(QWidget):
 
             # Draw tick mark
             tick_height = 5 if is_major_tick else 3
-            painter.setPen(QPen(colors["axis"], 1.5 if is_major_tick else 1))
+            painter.setPen(QPen(colors["axis_label"], 1.5 if is_major_tick else 1))
             painter.drawLine(x, axis_y - tick_height, x, axis_y) # Ticks point upwards
 
             # Draw time label
@@ -324,7 +289,7 @@ class GanttChart(QWidget):
             current_x = int(self.left_margin + display_time * self.time_scale)
 
             # Draw line - Use dedicated color
-            painter.setPen(QPen(colors["current_time_line"], 2, Qt.SolidLine))
+            painter.setPen(QPen(colors["timeline_marker"], 2, Qt.SolidLine))
             painter.drawLine(current_x, int(self.header_height), current_x, int(self.height()))
 
             # Draw time value above the line in the header
@@ -336,9 +301,9 @@ class GanttChart(QWidget):
             # Background for time indicator text
             time_bg_path = QPainterPath()
             time_bg_path.addRoundedRect(QRectF(time_rect), 3, 3)
-            painter.fillPath(time_bg_path, colors["current_time_line"].darker(120))
+            painter.fillPath(time_bg_path, colors["timeline_marker"].darker(120))
 
-            painter.setPen(colors["current_time_text"])
+            painter.setPen(colors["highlight_text"])
             painter.drawText(time_rect, Qt.AlignCenter, time_str)
         
     def _draw_process_labels(self, painter: QPainter, colors: Dict[str, QColor]):
@@ -646,3 +611,205 @@ class GanttChart(QWidget):
         painter.translate(tooltip_rect.left() + 10, tooltip_rect.top() + 7.5) # Position text inside padding
         doc.drawContents(painter)
         painter.translate(-(tooltip_rect.left() + 10), -(tooltip_rect.top() + 7.5)) # Reset translation
+        
+    def _get_theme_colors(self):
+        """
+        Get color palette based on current theme.
+        
+        Returns:
+            Dict[str, QColor]: Dictionary of colors for the current theme
+        """
+        if self.dark_mode:
+            return {
+                "background": QColor("#1E1E1E"),
+                "text": QColor("#F0F0F0"),
+                "grid": QColor("#3D3D3D"),
+                "grid_minor": QColor("#2A2A2A"),
+                "header": QColor("#2F2F2F"),
+                "header_text": QColor("#FFFFFF"),
+                "highlight": QColor("#4A90E2"),
+                "highlight_text": QColor("#FFFFFF"),
+                "hover": QColor("#4A90E2").lighter(150),
+                "hover_text": QColor("#FFFFFF"),
+                "border": QColor("#505050"),
+                "idle": QColor("#444444"),
+                "timeline_marker": QColor("#77C6FF"),
+                "axis_label": QColor("#B0B0B0"),
+                "process_name_bg": QColor("#2A2A2A"),
+            }
+        else:
+            return {
+                "background": QColor("#FFFFFF"),
+                "text": QColor("#212121"),
+                "grid": QColor("#E0E0E0"),
+                "grid_minor": QColor("#F0F0F0"),
+                "header": QColor("#F5F5F5"),
+                "header_text": QColor("#212121"),
+                "highlight": QColor("#1976D2"),
+                "highlight_text": QColor("#FFFFFF"),
+                "hover": QColor("#1976D2").lighter(150),
+                "hover_text": QColor("#212121"),
+                "border": QColor("#BDBDBD"),
+                "idle": QColor("#EEEEEE"),
+                "timeline_marker": QColor("#1976D2"),
+                "axis_label": QColor("#616161"),
+                "process_name_bg": QColor("#F5F5F5"),
+            }
+    
+    def _draw_process_blocks(self, painter: QPainter, colors: Dict[str, QColor]):
+        """
+        Draw the process execution blocks with enhanced styling.
+        
+        Args:
+            painter (QPainter): The painter to use
+            colors (Dict[str, QColor]): Color palette
+        """
+        # Draw background grid (dotted lines)
+        painter.setPen(QPen(colors["grid"], 1, Qt.DashLine))
+        
+        # Draw vertical grid lines (time markers)
+        for t in range(0, self.max_time_displayed + 1):
+            x = self.left_margin + t * self.time_scale
+            painter.drawLine(x, self.header_height, x, self.height())
+        
+        # Draw horizontal grid lines (process separators)
+        for i in range(len(self.processes) + 1):
+            y = self.header_height + i * self.row_height
+            painter.drawLine(self.left_margin, y, self.width(), y)
+            
+        # Draw idle periods with striped pattern
+        idle_periods = self._get_idle_periods()
+        if idle_periods:
+            idle_brush = QBrush(colors["idle"], Qt.Dense7Pattern)  # Sparser pattern
+            painter.setBrush(idle_brush)
+            painter.setPen(QPen(colors["border"], 1, Qt.DashLine))  # Dashed border
+            
+            for start_time, end_time in idle_periods:
+                x = self.left_margin + start_time * self.time_scale
+                width = (end_time - start_time) * self.time_scale
+                
+                # Draw across all process rows
+                rect = QRect(
+                    x, 
+                    self.header_height,
+                    width,
+                    len(self.processes) * self.row_height
+                )
+                painter.fillRect(rect, idle_brush)
+                painter.drawRect(rect)
+                
+                # Add "IDLE" text in the middle if width permits
+                if width > 40:  # Only if there's enough space
+                    painter.setPen(colors["text"])
+                    painter.setFont(QFont("Segoe UI", 8, QFont.Bold))
+                    text_rect = QRect(
+                        x, 
+                        self.header_height + len(self.processes) * self.row_height // 3,
+                        width,
+                        self.row_height
+                    )
+                    painter.drawText(text_rect, Qt.AlignCenter, "IDLE")
+        
+        # Draw the actual process blocks with improved visual styling
+        painter.setFont(QFont("Segoe UI", 10))
+        
+        for process, start, end in self.timeline:
+            x = self.left_margin + start * self.time_scale
+            width = (end - start) * self.time_scale
+            
+            # Find process row index
+            try:
+                process_index = self.processes.index(process)
+            except ValueError:
+                continue  # Skip if process is no longer in the list
+                
+            y = self.header_height + process_index * self.row_height
+            rect = QRect(x, y, width, self.row_height)
+            
+            # Get process color with increased saturation/lightness for dark mode
+            base_color = self.colors.get(process.pid, QColor("gray"))
+            # Adjust color to ensure it's visible in both themes
+            if self.dark_mode:
+                # In dark mode, make colors brighter and more saturated
+                if base_color.lightness() < 128:
+                    base_color = base_color.lighter(150)
+                if base_color.saturation() < 200:
+                    h, s, l, a = base_color.getHsl()
+                    base_color.setHsl(h, min(255, s + 55), l, a)
+            else:
+                # In light mode, ensure colors are dark enough
+                if base_color.lightness() > 180:
+                    base_color = base_color.darker(120)
+            
+            # Determine if this block is being hovered
+            is_hovered = (self.hovered_block and 
+                         self.hovered_block[0] == process.pid and
+                         self.hovered_block[1] == start and 
+                         self.hovered_block[2] == end)
+            
+            # Fill with gradient background
+            if is_hovered:
+                # Apply hover effect - lighter gradient
+                gradient = QLinearGradient(rect.topLeft(), rect.bottomRight())
+                gradient.setColorAt(0, base_color.lighter(130))
+                gradient.setColorAt(1, base_color.lighter(110))
+                painter.setBrush(QBrush(gradient))
+                painter.setPen(QPen(base_color.lighter(150), 2))  # Brighter border
+            else:
+                # Normal gradient
+                gradient = QLinearGradient(rect.topLeft(), rect.bottomRight())
+                gradient.setColorAt(0, base_color.lighter(105))
+                gradient.setColorAt(1, base_color)
+                painter.setBrush(QBrush(gradient))
+                painter.setPen(QPen(base_color.darker(110), 1))  # Darker border
+                
+            # Draw rounded rectangle with drop shadow (implicit with gradient)
+            painter.drawRoundedRect(rect, 4, 4)
+            
+            # Determine text color to ensure readability
+            if base_color.lightness() > 150:
+                text_color = QColor("#000000")  # Black for light backgrounds
+            else:
+                text_color = QColor("#FFFFFF")  # White for dark backgrounds
+                
+            # If block is very small, just show process ID
+            text = f"P{process.pid}"
+            if width > 80:
+                # More detailed text for larger blocks
+                duration = end - start
+                text = f"{process.name} (P{process.pid}) - {duration} units"
+            elif width > 40:
+                # Medium block size
+                text = f"P{process.pid} - {end - start}"
+                
+            # Draw text with contrasting color
+            painter.setPen(text_color)
+            # Center text both horizontally and vertically
+            painter.drawText(rect, Qt.AlignCenter, text)
+            
+            # Add visual indication that process completed in this segment (checkmark)
+            if process.is_completed() and end == process.completion_time:
+                # Draw a subtle checkmark or completion indicator
+                checkmark_size = min(24, width // 3, self.row_height // 2)
+                if checkmark_size >= 10:  # Only draw if there's enough space
+                    checkmark_x = x + width - checkmark_size - 5
+                    checkmark_y = y + (self.row_height - checkmark_size) // 2
+                    
+                    # Draw circle with checkmark
+                    painter.setPen(QPen(text_color, 2))
+                    painter.setBrush(Qt.NoBrush)
+                    painter.drawEllipse(checkmark_x, checkmark_y, checkmark_size, checkmark_size)
+                    
+                    # Draw checkmark (simple diagonal line)
+                    painter.drawLine(
+                        checkmark_x + checkmark_size // 4, 
+                        checkmark_y + checkmark_size // 2,
+                        checkmark_x + checkmark_size // 2, 
+                        checkmark_y + checkmark_size * 3 // 4
+                    )
+                    painter.drawLine(
+                        checkmark_x + checkmark_size // 2, 
+                        checkmark_y + checkmark_size * 3 // 4,
+                        checkmark_x + checkmark_size * 3 // 4, 
+                        checkmark_y + checkmark_size // 4
+                    )

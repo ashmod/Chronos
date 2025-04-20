@@ -74,6 +74,27 @@ class Scheduler(ABC):
         
         return avg_waiting_time, avg_turnaround_time
     
+    def get_average_waiting_time(self):
+        """Calculate and return the average waiting time."""
+        completed = [p for p in self.processes if p.completion_time is not None]
+        if not completed:
+            return 0.0
+        return sum(p.waiting_time for p in completed) / len(completed)
+    
+    def get_average_turnaround_time(self):
+        """Calculate and return the average turnaround time."""
+        completed = [p for p in self.processes if p.completion_time is not None]
+        if not completed:
+            return 0.0
+        return sum(p.turnaround_time for p in completed) / len(completed)
+    
+    def get_average_response_time(self):
+        """Calculate and return the average response time."""
+        responded = [p for p in self.processes if p.response_time is not None]
+        if not responded:
+            return 0.0
+        return sum(p.response_time for p in responded) / len(responded)
+    
     @abstractmethod
     def get_next_process(self, current_time) -> Optional[Process]:
         """
