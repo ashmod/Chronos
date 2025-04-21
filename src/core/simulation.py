@@ -1,4 +1,5 @@
 import time
+import threading
 from typing import List, Dict, Tuple, Optional, Callable
 from ..models.process import Process
 from .scheduler import Scheduler
@@ -184,7 +185,10 @@ class Simulation:
         """Start the simulation."""
         self.running = True
         self.paused = False
-        self._run_simulation()
+        # Run the simulation in a new thread to avoid blocking the UI
+        simulation_thread = threading.Thread(target=self._run_simulation)
+        simulation_thread.daemon = True
+        simulation_thread.start()
         
     def stop(self):
         """Stop the simulation."""

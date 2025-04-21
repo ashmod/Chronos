@@ -1,105 +1,90 @@
+from dataclasses import dataclass
+
 class Process:
     """
-    Represents a process in the CPU scheduler simulation.
+    Represents a process in the CPU scheduling simulation.
     """
     
-    def __init__(self, pid, name, arrival_time, burst_time, priority=0):
+    def __init__(self, pid: int, name: str, arrival_time: int, burst_time: int, priority: int = None):
         """
         Initialize a new Process instance.
         
         Args:
             pid (int): Process ID
             name (str): Process name
-            arrival_time (int): The time when the process arrives
-            burst_time (int): The total CPU time needed by the process
-            priority (int, optional): Priority of the process (smaller value means higher priority)
+            arrival_time (int): Arrival time of the process
+            burst_time (int): Burst time required by the process
+            priority (int, optional): Priority of the process (lower value means higher priority)
         """
         self.pid = pid
         self.name = name
         self.arrival_time = arrival_time
         self.burst_time = burst_time
-        self.remaining_time = burst_time
         self.priority = priority
-        self.start_time = None
+        
+        # Runtime state
+        self.remaining_time = burst_time
         self.completion_time = None
         self.waiting_time = 0
         self.turnaround_time = 0
         self.response_time = None
-        self.first_run_time = None  # Track when process first starts execution
+        self.start_time = None
         self.execution_history = []  # List of (start_time, end_time) tuples
         
     def reset(self):
         """Reset the process state for a new simulation."""
         self.remaining_time = self.burst_time
-        self.start_time = None
         self.completion_time = None
         self.waiting_time = 0
         self.turnaround_time = 0
         self.response_time = None
-        self.first_run_time = None
+        self.start_time = None
         self.execution_history = []
         
-    def reset_progress(self):
-        """Reset the progress of the process (alias for reset)."""
-        self.reset()
-        
-    def is_completed(self):
-        """Check if the process has completed execution."""
-        return self.remaining_time <= 0
-        
-    def calculate_turnaround_time(self):
-        """Calculate and set the turnaround time."""
-        if self.completion_time is not None:
-            self.turnaround_time = self.completion_time - self.arrival_time
-            
-    def calculate_waiting_time(self):
-        """Calculate and set the waiting time."""
-        if self.turnaround_time:
-            self.waiting_time = self.turnaround_time - self.burst_time
-            
-    def execute(self, current_time, time_quantum=1):
+    def execute(self, current_time: int, time_slice: int = 1) -> int:
         """
-        Execute the process for the given time quantum.
+        Execute the process for the given time slice.
         
         Args:
             current_time (int): Current simulation time
-            time_quantum (int): Amount of time to execute
+            time_slice (int): Maximum time to execute
             
         Returns:
-            int: The amount of time actually used (may be less than time_quantum if process completes)
+            int: Actual time executed
         """
+        # If first execution, record response time
+        if self.response_time is None:
+            self.response_time = current_time - self.arrival_time
+            
+        # If first time, record start time
         if self.start_time is None:
             self.start_time = current_time
             
-        # Track the first time this process runs (for response time)
-        if self.first_run_time is None:
-            self.first_run_time = current_time
-            self.response_time = current_time - self.arrival_time
-            
-        execution_time = min(self.remaining_time, time_quantum)
-        self.remaining_time -= execution_time
+        # Calculate how much time to actually execute
+        time_to_execute = min(time_slice, self.remaining_time)
         
-        # Record this execution period
-        self.execution_history.append((current_time, current_time + execution_time))
+        # Update remaining time
+        self.remaining_time -= time_to_execute
         
-        if self.is_completed():
-            self.completion_time = current_time + execution_time
-            self.calculate_turnaround_time()
-            self.calculate_waiting_time()
+        # Record execution interval
+        self.execution_history.append((current_time, current_time + time_to_execute))
+        
+        # If process completes, calculate metrics
+        if self.remaining_time == 0:
+            self.completion_time = current_time + time_to_execute
+            self.turnaround_time = self.completion_time - self.arrival_time
+            self.waiting_time = self.turnaround_time - self.burst_time
             
-        return execution_time
-    
-    def clone(self):
-        """Create a clone of this process."""
-        cloned = Process(
-            pid=self.pid,
-            name=self.name,
-            arrival_time=self.arrival_time,
-            burst_time=self.burst_time,
-            priority=self.priority
-        )
-        return cloned
-    
-    def __str__(self):
-        """String representation of the process."""
-        return f"Process {self.pid} ({self.name}): arrival={self.arrival_time}, burst={self.burst_time}, priority={self.priority}"
+        return time_to_execute
+        
+    def is_completed(self) -> bool:
+        """Check if the process has completed execution."""
+        return self.remaining_time <= 0
+        
+    def __str__(self) -> str:
+        """Return string representation of the process."""
+        return f"P{self.pid} ({self.name})"
+        
+    def __repr__(self) -> str:
+        """Return string representation of the process."""
+        return f"Process(pid={self.pid}, name='{self.name}', arrival_time={self.arrival_time}, burst_time={self.burst_time}, priority={self.priority})"

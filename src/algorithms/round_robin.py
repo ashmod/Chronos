@@ -17,7 +17,7 @@ class RoundRobinScheduler(Scheduler):
         Args:
             time_quantum (int): The time quantum for each process (default: 2)
         """
-        super().__init__("Round Robin")
+        super().__init__(f"Round Robin (Quantum: {time_quantum})")
         self.time_quantum = time_quantum
         self.time_slice = 1  # Set time slice to 1 to control execution more precisely
         self.ready_queue = deque()

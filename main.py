@@ -1,51 +1,148 @@
 #!/usr/bin/env python3
 import sys
 import time
-from PyQt5.QtWidgets import QApplication
-from PyQt5.QtCore import Qt
+import os
+import threading
+import customtkinter as ctk
 
-# Set high DPI attributes before creating QApplication
-if hasattr(Qt, 'AA_EnableHighDpiScaling'):
-    Qt.AA_EnableHighDpiScaling = True
-    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
-if hasattr(Qt, 'AA_UseHighDpiPixmaps'):
-    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
-
-from src.gui.main_window import MainWindow
 from src.gui.splash_screen import SplashScreen
+from src.gui.welcome_screen import WelcomeScreen
+from src.gui.scheduler_config import SchedulerConfigFrame
+from src.gui.simulation_screen import SimulationScreen
 
-def main():
-    """Main entry point for the ProcessPilot CPU Scheduler application."""
-    # Initialize application
-    app = QApplication(sys.argv)
+
+class CPUSchedulerApp:
+    """
+    Main CPU Scheduler application.
+    """
     
-    # Set application name and metadata
-    app.setApplicationName("ProcessPilot")
-    app.setApplicationDisplayName("ProcessPilot")
-    app.setOrganizationName("ASU Operating Systems Team")
-    app.setOrganizationDomain("asu.edu")
-    
-    # Show splash screen (dark mode by default)
-    splash = SplashScreen(app_name="ProcessPilot", dark_mode=True)
-    splash.show()
-    
-    # Process events to ensure splash screen is displayed
-    app.processEvents()
-    
-    # Load main window (simulate loading time)
-    def finish_loading():
-        # Create and show main window
-        window = MainWindow()
-        window.show()
+    def __init__(self, master):
+        """
+        Initialize the application.
         
-        # Hide splash screen when main window is ready
-        splash.finish(window)
+        Args:
+            master: The root Tk window
+        """
+        self.master = master
+        self.master.title("CPU Scheduler")
+        self.master.protocol("WM_DELETE_WINDOW", self.on_close)
+        
+        # Configure theme
+        ctk.set_appearance_mode("dark")  # Options: "dark", "light"
+        ctk.set_default_color_theme("blue")  # Options: "blue", "green", "dark-blue"
+        
+        # Set window icon if available
+        try:
+            icon_path = os.path.join(os.path.dirname(__file__), "docs", "icon.ico")
+            if os.path.exists(icon_path):
+                self.master.iconbitmap(icon_path)
+        except Exception:
+            pass
+        
+        # Configure window size and position
+        window_width = 1200
+        window_height = 800
+        
+        screen_width = self.master.winfo_screenwidth()
+        screen_height = self.master.winfo_screenheight()
+        
+        x = (screen_width - window_width) // 2
+        y = (screen_height - window_height) // 2
+        
+        self.master.geometry(f"{window_width}x{window_height}+{x}+{y}")
+        self.master.minsize(900, 600)
+        
+        # Configure main grid
+        self.master.grid_columnconfigure(0, weight=1)
+        self.master.grid_rowconfigure(0, weight=1)
+        
+        # Initialize variables
+        self.current_frame = None
+        self.welcome_frame = None
+        self.config_frame = None
+        self.simulation_frame = None
+        
+        # Show splash screen and then welcome screen
+        self.master.withdraw()  # Hide main window until splash screen is done
+        self.splash = SplashScreen(self.master, self.show_welcome_screen)
     
-    # Connect splash screen finished signal to lambda that shows main window
-    splash.finished.connect(finish_loading)
+    def show_welcome_screen(self):
+        """Show the welcome screen."""
+        # Show main window
+        self.master.deiconify()
+        
+        # Create and show welcome screen
+        self.welcome_frame = WelcomeScreen(self.master, self.show_config_screen)
+        self.switch_frame(self.welcome_frame)
     
-    # Start application event loop
-    sys.exit(app.exec_())
+    def show_config_screen(self):
+        """Show the scheduler configuration screen."""
+        # Create config screen if it doesn't exist
+        if self.config_frame is None:
+            self.config_frame = SchedulerConfigFrame(self.master, self.show_simulation_screen)
+            
+        # Switch to config screen
+        self.switch_frame(self.config_frame)
+    
+    def show_simulation_screen(self, scheduler):
+        """
+        Show the simulation screen with the configured scheduler.
+        
+        Args:
+            scheduler: The configured scheduler to use for simulation
+        """
+        # Create simulation screen if it doesn't exist
+        if self.simulation_frame is None:
+            self.simulation_frame = SimulationScreen(self.master, self.show_config_screen)
+            
+        # Set scheduler and switch to simulation screen
+        self.simulation_frame.set_scheduler(scheduler)
+        self.switch_frame(self.simulation_frame)
+    
+    def switch_frame(self, frame):
+        """
+        Switch to a different frame.
+        
+        Args:
+            frame: The frame to switch to
+        """
+        # Hide current frame if it exists
+        if self.current_frame is not None:
+            self.current_frame.grid_forget()
+            
+        # Show new frame
+        frame.grid(row=0, column=0, sticky="nsew")
+        self.current_frame = frame
+    
+    def on_close(self):
+        """Handle window close event."""
+        # Check if simulation is running
+        if (self.simulation_frame is not None and 
+            hasattr(self.simulation_frame, 'simulation') and 
+            self.simulation_frame.simulation and 
+            self.simulation_frame.simulation.running):
+            
+            # Confirm exit if simulation is running
+            from tkinter import messagebox
+            if not messagebox.askyesno("Confirm Exit", 
+                                    "A simulation is still running. Are you sure you want to exit?"):
+                return
+                
+            # Stop simulation
+            self.simulation_frame.simulation.stop()
+            
+        # Destroy window
+        self.master.destroy()
+        sys.exit(0)
+
 
 if __name__ == "__main__":
-    main()
+    # Create root window
+    root = ctk.CTk()
+    
+    # Create and run application
+    app = CPUSchedulerApp(root)
+    
+    # Start main loop
+    root.mainloop()
+
