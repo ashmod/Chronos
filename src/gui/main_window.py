@@ -144,6 +144,8 @@ class MainWindow(QMainWindow):
         new_action.setShortcut("Ctrl+N")
         new_action.triggered.connect(lambda: self.scene_manager.show_scene("welcome"))
         file_menu.addAction(new_action)
+
+        file_menu.addSeparator()
         
         # Import processes action
         import_action = QAction(self.style().standardIcon(QStyle.SP_DialogOpenButton), "&Import Processes...", self)
@@ -292,8 +294,8 @@ class MainWindow(QMainWindow):
         
         # Update the theme button
         self.theme_button.setIcon(self.sun_icon if self.dark_mode else self.moon_icon)
-        self.theme_button.setText("Light Mode" if self.dark_mode else "Dark Mode")
-        self.theme_button.setChecked(not self.dark_mode)
+        # self.theme_button.setText("Light Mode" if self.dark_mode else "Dark Mode")
+        # self.theme_button.setChecked(not self.dark_mode)
         
         # Update menu action text
         self.dark_mode_action.setText("&Light Mode" if self.dark_mode else "&Dark Mode")
@@ -408,13 +410,13 @@ class MainWindow(QMainWindow):
         app.setPalette(palette)
 
         # Rest of the stylesheet remains the same
-        app.setStyleSheet(f"""\
+        app.setStyleSheet(f"""
             QMainWindow, QDialog {{
                 background-color: {colors["window"]};
                 color: {colors["text"]};
             }}
-            QWidget {{ /* Apply font size globally */
-                font-size: 10pt; /* Base font size */
+            QWidget {{
+                font-size: 10pt;
             }}
             QGroupBox {{
                 border: 1px solid {colors["border"]};
@@ -435,7 +437,6 @@ class MainWindow(QMainWindow):
                 border-radius: 4px;
             }}
 
-            /* Base Button Styles */
             QPushButton {{
                 border-radius: 6px;
                 padding: 8px 16px;
@@ -450,35 +451,95 @@ class MainWindow(QMainWindow):
                 background-color: {colors["button_hover"]};
                 border-color: {QColor(colors["border"]).lighter(120).name() if dark_mode else QColor(colors["border"]).darker(120).name()};
             }}
-            QPushButton:pressed {{ background-color: {colors["button_pressed"]}; }}
+            QPushButton:pressed {{
+                background-color: {colors["button_pressed"]};
+            }}
             QPushButton:disabled {{
                 background-color: {palette.color(QPalette.Disabled, QPalette.Button).name()};
                 color: {palette.color(QPalette.Disabled, QPalette.ButtonText).name()};
                 border-color: {colors["border"]};
             }}
 
-            /* Button Colors by Function */
-            /* Add Process Button - Green */
-            QPushButton#add_process_button {{ background-color: {colors["green"]}; color: {button_text_color}; border-color: {colors["green"]}; }}
-            QPushButton#add_process_button:hover {{ background-color: {colors["green_hover"]}; border-color: {colors["green_hover"]}; }}
+            QPushButton#add_process_button {{
+                background-color: {colors["green"]};
+                color: {button_text_color};
+                border-color: {colors["green"]};
+            }}
+            QPushButton#add_process_button:hover {{
+                background-color: {colors["green_hover"]};
+                border-color: {colors["green_hover"]};
+            }}
 
-            /* Remove/Reset Button - Red/Amber */
-            QPushButton#remove_all_button {{ background-color: {colors["red"]}; color: {button_text_color}; border-color: {colors["red"]}; }}
-            QPushButton#remove_all_button:hover {{ background-color: {colors["red_hover"]}; border-color: {colors["red_hover"]}; }}
-            QPushButton#reset_button {{ background-color: {colors["amber"]}; color: {amber_button_text_color}; border-color: {colors["amber"]}; }}
-            QPushButton#reset_button:hover {{ background-color: {colors["amber_hover"]}; border-color: {colors["amber_hover"]}; }}
-            QPushButton#import_button, QPushButton#export_button {{ background-color: {colors["blue"]}; color: {button_text_color}; border-color: {colors["blue"]}; }}
-            QPushButton#import_button:hover, QPushButton#export_button:hover {{ background-color: {colors["blue_hover"]}; border-color: {colors["blue_hover"]}; }}
-            QPushButton#start_button {{ background-color: {colors["green"]}; color: {button_text_color}; border-color: {colors["green"]}; }}
-            QPushButton#start_button:hover {{ background-color: {colors["green_hover"]}; border-color: {colors["green_hover"]}; }}
-            QPushButton#pause_resume_button {{ background-color: {colors["amber"]}; color: {amber_button_text_color}; border-color: {colors["amber"]}; }}
-            QPushButton#pause_resume_button:hover {{ background-color: {colors["amber_hover"]}; border-color: {colors["amber_hover"]}; }}
-            QPushButton#run_all_button {{ background-color: {colors["purple"]}; color: {button_text_color}; border-color: {colors["purple"]}; }}
-            QPushButton#run_all_button:hover {{ background-color: {colors["purple_hover"]}; border-color: {colors["purple_hover"]}; }}
-            QPushButton#reset_gantt_button {{ background-color: {colors["blue"]}; color: {button_text_color}; border-color: {colors["blue"]}; }}
-            QPushButton#reset_gantt_button:hover {{ background-color: {colors["blue_hover"]}; border-color: {colors["blue_hover"]}; }}
+            QPushButton#remove_all_button {{
+                background-color: {colors["red"]};
+                color: {button_text_color};
+                border-color: {colors["red"]};
+            }}
+            QPushButton#remove_all_button:hover {{
+                background-color: {colors["red_hover"]};
+                border-color: {colors["red_hover"]};
+            }}
 
-            /* Form Elements */
+            QPushButton#reset_button {{
+                background-color: {colors["amber"]};
+                color: {amber_button_text_color};
+                border-color: {colors["amber"]};
+            }}
+            QPushButton#reset_button:hover {{
+                background-color: {colors["amber_hover"]};
+                border-color: {colors["amber_hover"]};
+            }}
+
+            QPushButton#import_button, QPushButton#export_button {{
+                background-color: {colors["blue"]};
+                color: {button_text_color};
+                border-color: {colors["blue"]};
+            }}
+            QPushButton#import_button:hover, QPushButton#export_button:hover {{
+                background-color: {colors["blue_hover"]};
+                border-color: {colors["blue_hover"]};
+            }}
+
+            QPushButton#start_button {{
+                background-color: {colors["green"]};
+                color: {button_text_color};
+                border-color: {colors["green"]};
+            }}
+            QPushButton#start_button:hover {{
+                background-color: {colors["green_hover"]};
+                border-color: {colors["green_hover"]};
+            }}
+
+            QPushButton#pause_resume_button {{
+                background-color: {colors["amber"]};
+                color: {amber_button_text_color};
+                border-color: {colors["amber"]};
+            }}
+            QPushButton#pause_resume_button:hover {{
+                background-color: {colors["amber_hover"]};
+                border-color: {colors["amber_hover"]};
+            }}
+
+            QPushButton#run_all_button {{
+                background-color: {colors["purple"]};
+                color: {button_text_color};
+                border-color: {colors["purple"]};
+            }}
+            QPushButton#run_all_button:hover {{
+                background-color: {colors["purple_hover"]};
+                border-color: {colors["purple_hover"]};
+            }}
+
+            QPushButton#reset_gantt_button {{
+                background-color: {colors["blue"]};
+                color: {button_text_color};
+                border-color: {colors["blue"]};
+            }}
+            QPushButton#reset_gantt_button:hover {{
+                background-color: {colors["blue_hover"]};
+                border-color: {colors["blue_hover"]};
+            }}
+
             QComboBox, QSpinBox, QLineEdit {{
                 border: 1px solid {colors["border"]};
                 border-radius: 6px;
@@ -500,49 +561,40 @@ class MainWindow(QMainWindow):
                 border-top-right-radius: 5px;
                 border-bottom-right-radius: 5px;
             }}
-            QComboBox:on {{ /* When the combobox is open */
-                border-bottom-left-radius: 0px;
-                border-bottom-right-radius: 0px;
-            }}
-            QComboBox::item {{
-                padding: 6px 10px;
-            }}
             QComboBox::item:selected {{
                 background-color: {colors["highlight"]};
                 color: {colors["highlighted_text"]};
             }}
 
-            /* SpinBox buttons */
             QSpinBox::up-button, QSpinBox::down-button {{
-                 border-left: 1px solid {colors["border"]};
-                 background-color: {colors["button"]};
-                 border-radius: 0px;
+                border-left: 1px solid {colors["border"]};
+                background-color: {colors["button"]};
             }}
-            QSpinBox::up-button {{ subcontrol-position: top right; border-top-right-radius: 6px; }}
-            QSpinBox::down-button {{ subcontrol-position: bottom right; border-bottom-right-radius: 6px; }}
-            QSpinBox::up-button:hover, QSpinBox::down-button:hover {{ background-color: {colors["button_hover"]}; }}
-            QSpinBox::up-arrow {{ width: 12px; height: 12px; }}
-            QSpinBox::down-arrow {{ width: 12px; height: 12px; }}
+            QSpinBox::up-button {{
+                subcontrol-position: top right;
+                border-top-right-radius: 6px;
+            }}
+            QSpinBox::down-button {{
+                subcontrol-position: bottom right;
+                border-bottom-right-radius: 6px;
+            }}
+            QSpinBox::up-button:hover, QSpinBox::down-button:hover {{
+                background-color: {colors["button_hover"]};
+            }}
 
-            /* Tabs */
             QTabWidget::pane {{
                 border: 1px solid {colors["border"]};
-                background-color: {colors["base"]}; /* Pane background */
+                background-color: {colors["base"]};
                 border-radius: 8px;
-                border-top-left-radius: 0px; /* Align with tabs */
-                margin-top: -1px; /* Overlap with tab bar */
+                border-top-left-radius: 0px;
+                margin-top: -1px;
                 padding: 12px;
             }}
-            QTabBar {{
-                qproperty-drawBase: 0; /* Remove the default base line under the tabs */
-                margin-bottom: -1px; /* Ensure tabs slightly overlap the pane */
-                alignment: Qt.AlignLeft; /* Align tabs to the left */
-            }}
             QTabBar::tab {{
-                background-color: transparent; /* Make inactive tabs transparent */
-                color: {QColor(colors["text"]).darker(130).name() if not dark_mode else QColor(colors["text"]).lighter(130).name()}; /* Dim inactive tab text more */
-                border: 1px solid transparent; /* Transparent border initially */
-                border-bottom: 2px solid {colors["border"]}; /* Slightly thicker underline for inactive tabs */
+                background-color: transparent;
+                color: {QColor(colors["text"]).darker(130).name() if not dark_mode else QColor(colors["text"]).lighter(130).name()};
+                border: 1px solid transparent;
+                border-bottom: 2px solid {colors["border"]};
                 padding: 10px 25px;
                 border-top-left-radius: 6px;
                 border-top-right-radius: 6px;
@@ -552,67 +604,47 @@ class MainWindow(QMainWindow):
                 font-size: 11pt;
             }}
             QTabBar::tab:selected {{
-                background-color: {colors["base"]}; /* Match the tab panel background */
-                color: {colors["highlight"]}; /* Highlight color for active tab text */
-                border: 1px solid {colors["border"]}; /* Visible border for active tab */
-                border-bottom: 2px solid {colors["highlight"]}; /* Highlight color for active tab underline */
-                font-weight: bold; /* Make selected tab bold */
+                background-color: {colors["base"]};
+                color: {colors["highlight"]};
+                border: 1px solid {colors["border"]};
+                border-bottom: 2px solid {colors["highlight"]};
+                font-weight: bold;
             }}
             QTabBar::tab:hover:!selected {{
-                background-color: {QColor(colors["button_hover"]).lighter(105).name() if dark_mode else QColor(colors["button_hover"]).darker(105).name()}; /* Subtle hover background */
-                color: {colors["text"]}; /* Full text color on hover */
-                border: 1px solid transparent; /* Keep border transparent on hover */
-                border-bottom: 2px solid {QColor(colors["border"]).lighter(110).name() if dark_mode else QColor(colors["border"]).darker(110).name()}; /* Slightly change underline on hover */
-            }}
-            QTabBar::tab:last {{
-                margin-right: 0; /* No margin for the last tab */
+                background-color: {QColor(colors["button_hover"]).lighter(105).name() if dark_mode else QColor(colors["button_hover"]).darker(105).name()};
+                color: {colors["text"]};
+                border: 1px solid transparent;
+                border-bottom: 2px solid {QColor(colors["border"]).lighter(110).name() if dark_mode else QColor(colors["border"]).darker(110).name()};
             }}
 
-            /* Scrollbars */
-            QScrollBar:vertical {{
+            QScrollBar:vertical, QScrollBar:horizontal {{
                 background-color: {colors["scrollbar_bg"]};
-                width: 12px;
-                margin: 0px 0px 0px 0px;
                 border-radius: 6px;
             }}
-            QScrollBar::handle:vertical {{
+            QScrollBar:vertical {{
+                width: 12px;
+            }}
+            QScrollBar:horizontal {{
+                height: 12px;
+            }}
+            QScrollBar::handle:vertical, QScrollBar::handle:horizontal {{
                 background-color: {colors["scrollbar_handle"]};
+                min-width: 30px;
                 min-height: 30px;
                 border-radius: 6px;
             }}
-            QScrollBar::handle:vertical:hover {{
+            QScrollBar::handle:hover {{
                 background-color: {colors["scrollbar_handle_hover"]};
             }}
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
-                height: 0px;
+            QScrollBar::add-line, QScrollBar::sub-line {{
                 background: none;
-            }}
-            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
-                background: none;
-            }}
-             QScrollBar:horizontal {{
-                background-color: {colors["scrollbar_bg"]};
-                height: 12px;
-                margin: 0px 0px 0px 0px;
-                border-radius: 6px;
-            }}
-            QScrollBar::handle:horizontal {{
-                background-color: {colors["scrollbar_handle"]};
-                min-width: 30px;
-                border-radius: 6px;
-            }}
-            QScrollBar::handle:horizontal:hover {{
-                background-color: {colors["scrollbar_handle_hover"]};
-            }}
-            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
                 width: 0px;
-                background: none;
+                height: 0px;
             }}
-            QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {{
+            QScrollBar::add-page, QScrollBar::sub-page {{
                 background: none;
             }}
 
-            /* Slider */
             QSlider::groove:horizontal {{
                 height: 8px;
                 background: {colors["slider_groove"]};
@@ -631,41 +663,38 @@ class MainWindow(QMainWindow):
                 border: 1px solid {QColor(colors["slider_handle_border"]).lighter(115).name()};
             }}
 
-            /* Tables */
             QTableWidget {{
-                gridline-color: transparent; /* Hide grid lines */
+                gridline-color: transparent;
                 background-color: {colors["base"]};
                 alternate-background-color: {colors["alternate_base"]};
                 border: 1px solid {colors["border"]};
                 border-radius: 8px;
-                padding: 0px; /* Remove padding around the table itself */
-                selection-background-color: {colors["highlight"]}; /* Explicit selection color */
+                selection-background-color: {colors["highlight"]};
                 selection-color: {colors["highlighted_text"]};
             }}
-            QHeaderView::section {{ /* Style for both horizontal and vertical headers */
+            QHeaderView::section {{
                 background-color: {colors["table_header"]};
                 color: {colors["text"]};
-                padding: 10px 8px; /* Increased padding */
-                border: none; /* Remove default borders */
+                padding: 10px 8px;
+                border: none;
                 font-weight: bold;
                 font-size: 10pt;
             }}
             QHeaderView::section:horizontal {{
-                border-bottom: 2px solid {colors["highlight"]}; /* Highlight bottom border */
-                border-right: 1px solid {colors["border"]}; /* Separator line */
+                border-bottom: 2px solid {colors["highlight"]};
+                border-right: 1px solid {colors["border"]};
             }}
             QHeaderView::section:horizontal:last {{
-                border-right: none; /* No right border for the last header */
+                border-right: none;
             }}
-            QTableWidget::item {{ /* Style for individual cells */
-                padding: 8px; /* Add padding to cells */
-                border-bottom: 1px solid {colors["border"]}; /* Subtle separator */
+            QTableWidget::item {{
+                padding: 8px;
+                border-bottom: 1px solid {colors["border"]};
             }}
 
-            /* Status styling - Bold status text, colored for importance */
             QTableWidget QTableWidgetItem[userRole="Running"] {{
                 background-color: {QColor(colors['green']).lighter(150).name() if dark_mode else QColor(colors['green']).lighter(180).name()};
-                color: {'#000000' if dark_mode else '#000000'}; /* Ensure contrast */
+                color: #000000;
                 font-weight: bold;
             }}
             QTableWidget QTableWidgetItem[userRole="Completed"] {{
@@ -675,88 +704,60 @@ class MainWindow(QMainWindow):
             }}
             QTableWidget QTableWidgetItem[userRole="Waiting"] {{
                 background-color: {QColor(colors['amber']).lighter(150).name() if dark_mode else QColor(colors['amber']).lighter(180).name()};
-                color: {'#000000' if dark_mode else '#000000'}; /* Ensure contrast */
+                color: #000000;
             }}
             QTableWidget QTableWidgetItem[userRole="Not Arrived"] {{
                 background-color: transparent;
                 color: {QColor(colors['text']).darker(140).name() if dark_mode else QColor(colors['text']).darker(170).name()};
                 font-style: italic;
             }}
-            /* Summary Row Styling - Clearer separation */
+
             QTableWidget QTableWidgetItem[userRole="summary_label"] {{
                 background-color: {QColor(colors["table_header"]).lighter(110).name() if dark_mode else QColor(colors["table_header"]).darker(105).name()};
                 color: {colors["text"]};
-                padding-right: 15px;
-                border-top: 1px solid {colors["highlight"]}; /* Separator line above */
-                border-bottom: none;
+                font-weight: bold;
+                font-size: 10pt;
+                border-top: 1px solid {colors["highlight"]};
             }}
-             QTableWidget QTableWidgetItem[userRole="summary_value"] {{
+            QTableWidget QTableWidgetItem[userRole="summary_value"] {{
                 background-color: {QColor(colors["table_header"]).lighter(110).name() if dark_mode else QColor(colors["table_header"]).darker(105).name()};
                 color: {colors["highlight"]};
-                border-top: 1px solid {colors["highlight"]}; /* Separator line above */
-                border-bottom: none;
+                border-top: 1px solid {colors["highlight"]};
             }}
 
-            /* Progress Bar in Table - More refined look */
             QTableView QProgressBar {{
                 border: 1px solid {colors["border"]};
-                border-radius: 6px; /* Slightly less rounded */
+                border-radius: 6px;
                 background-color: {colors["base"]};
                 text-align: center;
                 color: {colors["text"]};
                 font-size: 9pt;
-                height: 18px; /* Consistent height */
-                margin: 2px 0; /* Add slight vertical margin */
+                height: 18px;
+                margin: 2px 0;
             }}
             QTableView QProgressBar::chunk {{
                 background-color: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 {QColor(colors['highlight']).lighter(115).name()}, stop:1 {colors['highlight']});
                 border-radius: 6px;
-                margin: 1px; /* Add margin to chunk for inset effect */
+                margin: 1px;
             }}
 
-            /* Remove Button in Table - More visible hover/pressed */
             QPushButton#remove_table_button {{
-                background-color: {colors['red']}; /* Red background */
-                color: {button_text_color}; /* White text */
+                background-color: {colors['red']};
+                color: {button_text_color};
                 border: none;
-                border-radius: 4px; /* Match other buttons */
-                padding: 5px; /* Increased padding */
-                qproperty-iconSize: 20px 20px; /* Slightly larger icon */
-                margin: 0; /* Remove any default margin */
+                border-radius: 4px;
+                padding: 5px;
+                qproperty-iconSize: 20px 20px;
+                margin: 0;
             }}
             QPushButton#remove_table_button:hover {{
                 background-color: {colors['red_hover']};
             }}
             QPushButton#remove_table_button:pressed {{
                 background-color: {QColor(colors['red']).darker(110).name()};
-            }}
-            
-            /* Summary Row Styling - More distinct */
-            QTableWidget QTableWidgetItem[userRole="summary_label"] {{
-                background-color: {QColor(colors["table_header"]).lighter(110).name() if dark_mode else QColor(colors["table_header"]).darker(105).name()};
-                color: {colors["text"]};
-                font-weight: bold;
-                font-size: 10pt;
-            }}
-            QTableWidget QTableWidgetItem[userRole="summary_value"] {{
-                background-color: {QColor(colors["table_header"]).lighter(110).name() if dark_mode else QColor(colors["table_header"]).darker(105).name()};
-                color: {colors["highlight"]};
-                font-weight: bold;
-                font-size: 10pt;
-                border-top: 1px solid {colors["highlight"]}; /* Separator line above */
-                border-bottom: none;
-            }}
-            
-            /* Enhanced tooltip styling */
-            QToolTip {{
-                background-color: {colors["base"]};
-                color: {colors["text"]};
-                border: 1px solid {colors["border"]};
-                border-radius: 4px;
-                padding: 4px;
-                font-size: 9pt;
-            }}
-        """)
+            }}""")
+        # self.repaint()  # Refresh the UI
+
         
     def on_export_results(self):
         """Redirect to results export functionality in the results scene."""

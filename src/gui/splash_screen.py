@@ -37,11 +37,11 @@ class SplashScreen(QSplashScreen):
         # Configure animation timers
         self.animation_timer = QTimer(self)
         self.animation_timer.timeout.connect(self.update_animation)
-        self.animation_timer.start(15)  # Update every 30ms
+        self.animation_timer.start(15)  # Update every 15ms
         
         self.progress_timer = QTimer(self)
         self.progress_timer.timeout.connect(self.update_progress)
-        self.progress_timer.start(30)  # Update every 70ms
+        self.progress_timer.start(30)  # Update every 30ms
         
         # Initialize animation variables
         self.animation_step = 0
