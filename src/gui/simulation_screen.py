@@ -14,6 +14,14 @@ import random
 from ..core.simulation import Simulation
 from ..models.process import Process
 
+# Define dark theme colors for matplotlib and ttk
+DARK_BG = "#2b2b2b"
+DARK_FG = "#DCE4EE"
+DARK_GRID = "#444444"
+DARK_AXES = "#333333"
+DARK_TOOLTIP_BG = "#3f3f3f"
+DARK_TOOLTIP_FG = "#ffffff"
+
 class SimulationScreen(ctk.CTkFrame):
     """
     Screen for visualizing the CPU scheduling simulation with live updates.
@@ -110,45 +118,72 @@ class SimulationScreen(ctk.CTkFrame):
         back_button.grid(row=0, column=1, sticky="e", padx=5)
 
     def _setup_gantt_chart(self, parent):
-        """Set up the Gantt chart visualization."""
+        """Set up the Gantt chart visualization with dark theme."""
         gantt_frame = ctk.CTkFrame(parent)
         gantt_frame.grid(row=0, column=0, sticky="nsew", padx=0, pady=(0, 5))
         gantt_frame.columnconfigure(0, weight=1)
         gantt_frame.rowconfigure(0, weight=1)
 
-        # Create a matplotlib figure for the Gantt chart
-        self.figure = Figure(figsize=(5, 4), dpi=100)
+        # Create a matplotlib figure for the Gantt chart with dark background
+        self.figure = Figure(figsize=(5, 4), dpi=100, facecolor=DARK_BG)
         self.ax = self.figure.add_subplot(111)
+        self.ax.set_facecolor(DARK_AXES) # Dark background for the plot area
+
+        # Configure colors for axes and ticks
+        self.ax.spines['bottom'].set_color(DARK_FG)
+        self.ax.spines['top'].set_color(DARK_FG)
+        self.ax.spines['left'].set_color(DARK_FG)
+        self.ax.spines['right'].set_color(DARK_FG)
+        self.ax.xaxis.label.set_color(DARK_FG)
+        self.ax.yaxis.label.set_color(DARK_FG)
+        self.ax.tick_params(axis='x', colors=DARK_FG)
+        self.ax.tick_params(axis='y', colors=DARK_FG)
+        self.ax.title.set_color(DARK_FG)
+
         self.canvas = FigureCanvasTkAgg(self.figure, gantt_frame)
         self.canvas_widget = self.canvas.get_tk_widget()
+        # Set the canvas background to match the frame
+        self.canvas_widget.configure(bg=gantt_frame.cget("fg_color")[1]) # Use the dark mode color
         self.canvas_widget.grid(row=0, column=0, sticky="nsew")
 
         # Set up initial Gantt chart
         self._init_gantt_chart()
 
         # Add tooltip for hover information (using a CTkLabel for better theme integration)
-        self.tooltip = ctk.CTkLabel(self, text="", corner_radius=5, fg_color=("gray80", "gray20"), text_color=("black", "white"))
+        self.tooltip = ctk.CTkLabel(self, text="", corner_radius=5, fg_color=DARK_TOOLTIP_BG, text_color=DARK_TOOLTIP_FG)
 
         # Bind mouse motion for tooltips
         self.canvas.mpl_connect("motion_notify_event", self._on_hover)
         self.canvas.mpl_connect("axes_leave_event", lambda event: self.tooltip.place_forget())
 
     def _init_gantt_chart(self):
-        """Initialize the Gantt chart with empty data."""
+        """Initialize the Gantt chart with dark theme styling."""
         self.ax.clear()
-        self.ax.set_title("CPU Scheduling Gantt Chart")
-        self.ax.set_xlabel("Time")
-        self.ax.set_ylabel("Processes")
+        self.ax.set_title("CPU Scheduling Gantt Chart", color=DARK_FG)
+        self.ax.set_xlabel("Time", color=DARK_FG)
+        self.ax.set_ylabel("Processes", color=DARK_FG)
         self.ax.set_xlim(0, 10)  # Initial time window
-        self.ax.grid(True, which='both', axis='x', linestyle='--', linewidth=0.5)
+
+        # Set grid color
+        self.ax.grid(True, which='both', axis='x', linestyle='--', linewidth=0.5, color=DARK_GRID)
+
+        # Re-apply axis/tick colors after clear
+        self.ax.set_facecolor(DARK_AXES)
+        self.ax.spines['bottom'].set_color(DARK_FG)
+        self.ax.spines['top'].set_color(DARK_FG)
+        self.ax.spines['left'].set_color(DARK_FG)
+        self.ax.spines['right'].set_color(DARK_FG)
+        self.ax.tick_params(axis='x', colors=DARK_FG)
+        self.ax.tick_params(axis='y', colors=DARK_FG)
+
         self.figure.tight_layout()
         self.canvas.draw()
-        
+
         # Store gantt data for tooltips
         self.gantt_bars = []
 
     def _setup_process_table(self, parent):
-        """Set up the process table."""
+        """Set up the process table with dark theme styling."""
         table_frame = ctk.CTkFrame(parent)
         table_frame.grid(row=1, column=0, sticky="nsew", padx=0, pady=(5, 0))
         table_frame.columnconfigure(0, weight=1)
@@ -159,17 +194,32 @@ class SimulationScreen(ctk.CTkFrame):
         table_label = ctk.CTkLabel(table_frame, text="Process Table", font=("Segoe UI", 14, "bold"))
         table_label.grid(row=0, column=0, sticky="w", padx=5, pady=(5, 2))
 
+        # --- Style the ttk.Treeview for dark theme --- 
+        style = ttk.Style()
+        style.theme_use("clam") # 'clam' theme is often easier to customize
+
+        # Configure Treeview colors
+        style.configure("Treeview",
+                        background=DARK_BG,
+                        foreground=DARK_FG,
+                        fieldbackground=DARK_BG,
+                        borderwidth=0)
+        # Configure Header colors
+        style.configure("Treeview.Heading",
+                        background=DARK_AXES, # Slightly different background for header
+                        foreground=DARK_FG,
+                        relief="flat")
+        # Configure selected item colors
+        style.map('Treeview',
+                  background=[('selected', '#0078D7')], # Use a highlight color
+                  foreground=[('selected', 'white')])
+        # Remove borders from headings
+        style.layout("Treeview.Heading", [('Treeview.heading', {'sticky': 'nswe'})])
+        # --- End of Styling --- 
+
         # Create the treeview for the process table
         columns = ("PID", "Name", "Arrival", "Burst", "Priority", "Remaining", "Waiting", "Turnaround", "Completion")
-
-        # Use a Treeview from ttk, style it slightly
-        style = ttk.Style()
-        # TODO: Add better styling based on CTk theme if possible
-        # style.theme_use("clam") # Example theme
-        # style.configure("Treeview", background="#2b2b2b", foreground="white", fieldbackground="#333333")
-        # style.configure("Treeview.Heading", background="#555555", foreground="white")
-
-        self.process_table = ttk.Treeview(table_frame, columns=columns, show="headings")
+        self.process_table = ttk.Treeview(table_frame, columns=columns, show="headings", style="Treeview")
 
         # Define headings
         for col in columns:
@@ -178,7 +228,8 @@ class SimulationScreen(ctk.CTkFrame):
             min_width = 50 if col != "Name" else 80
             self.process_table.column(col, width=width, minwidth=min_width, stretch=tk.YES, anchor='w')
 
-        # Add scrollbars (using CTkScrollbar if desired, but ttk works fine)
+        # Add scrollbars (using ttk scrollbars, styling them is harder)
+        # Consider CTkScrollbar if deeper theme integration is needed
         x_scrollbar = ttk.Scrollbar(table_frame, orient="horizontal", command=self.process_table.xview)
         y_scrollbar = ttk.Scrollbar(table_frame, orient="vertical", command=self.process_table.yview)
         self.process_table.configure(xscrollcommand=x_scrollbar.set, yscrollcommand=y_scrollbar.set)
@@ -402,7 +453,7 @@ class SimulationScreen(ctk.CTkFrame):
             self.live_name_var.set(f"P{self.next_pid}")
 
     def _update_gantt_chart(self, current_process, current_time):
-        """Update the Gantt chart with current execution information."""
+        """Update the Gantt chart with dark theme styling."""
         if not self.simulation:
             return
 
@@ -413,54 +464,83 @@ class SimulationScreen(ctk.CTkFrame):
         # Get all processes
         processes = self.scheduler.processes
         if not processes:
+            # If no processes, still draw the base chart correctly themed
+            self._init_gantt_chart()
             return
 
         # Prepare data for Gantt chart
         process_names = [p.name for p in processes]
         y_pos = np.arange(len(process_names))
 
-        # Set up chart
-        self.ax.set_title("CPU Scheduling Gantt Chart")
-        self.ax.set_xlabel("Time")
+        # Set up chart elements with dark theme colors
+        self.ax.set_title("CPU Scheduling Gantt Chart", color=DARK_FG)
+        self.ax.set_xlabel("Time", color=DARK_FG)
+        self.ax.set_ylabel("Processes", color=DARK_FG)
         self.ax.set_yticks(y_pos)
-        self.ax.set_yticklabels(process_names)
+        self.ax.set_yticklabels(process_names, color=DARK_FG) # Set tick label color
+        self.ax.set_facecolor(DARK_AXES)
+
+        # Configure colors for axes and ticks
+        self.ax.spines['bottom'].set_color(DARK_FG)
+        self.ax.spines['top'].set_color(DARK_FG)
+        self.ax.spines['left'].set_color(DARK_FG)
+        self.ax.spines['right'].set_color(DARK_FG)
+        self.ax.tick_params(axis='x', colors=DARK_FG)
+        self.ax.tick_params(axis='y', colors=DARK_FG)
 
         # Dynamically adjust time window based on current time
+        max_time = current_time
+        if self.simulation.get_timeline_entries():
+             max_time = max(current_time, max(entry[2] for entry in self.simulation.get_timeline_entries()))
+
         window_size = 20  # Show 20 time units at a time
-        start_time = max(0, current_time - window_size // 2)
-        end_time = start_time + window_size
+        # Adjust window logic slightly to handle max_time
+        if max_time <= window_size:
+            start_time = 0
+            end_time = window_size
+        else:
+            start_time = max(0, current_time - window_size * 0.75) # Show more past than future
+            end_time = start_time + window_size
+            if end_time < max_time:
+                 end_time = max_time + 2 # Add a little buffer
+                 start_time = end_time - window_size
+
         self.ax.set_xlim(start_time, end_time)
 
         # Add grid
-        self.ax.grid(True, which='both', axis='x', linestyle='--', linewidth=0.5)
+        self.ax.grid(True, which='both', axis='x', linestyle='--', linewidth=0.5, color=DARK_GRID)
 
         # Draw execution blocks for each process
         timeline_entries = self.simulation.get_timeline_entries()
 
         # Draw each timeline entry
         for entry in timeline_entries:
-            process, start_time, end_time = entry
-            process_idx = processes.index(process)
-            color = self.process_colors[process.pid]
+            process, start_t, end_t = entry
+            try:
+                process_idx = processes.index(process)
+            except ValueError:
+                continue # Skip if process not found (e.g., added and removed quickly?)
+
+            color = self.process_colors.get(process.pid, (0.5, 0.5, 0.5)) # Default color if not found
 
             # Create a rectangle for this execution block
             rect = patches.Rectangle(
-                (start_time, process_idx - 0.4),  # (x, y)
-                end_time - start_time,              # width
+                (start_t, process_idx - 0.4),  # (x, y)
+                end_t - start_t,              # width
                 0.8,                               # height
-                linewidth=1,
-                edgecolor='black',
+                linewidth=0.5, # Thinner border
+                edgecolor=DARK_FG, # Light border for visibility
                 facecolor=color,
-                alpha=0.8,
+                alpha=0.9, # Slightly more opaque
                 label=process.name
             )
             self.ax.add_patch(rect)
 
             # Store rectangle for tooltip
-            self.gantt_bars.append((rect, process, start_time, end_time))
+            self.gantt_bars.append((rect, process, start_t, end_t))
 
         # Draw current time marker
-        self.ax.axvline(x=current_time, color='red', linestyle='-', linewidth=1)
+        self.ax.axvline(x=current_time, color='red', linestyle='-', linewidth=1.5)
 
         # Adjust layout and redraw
         self.figure.tight_layout()

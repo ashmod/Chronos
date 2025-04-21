@@ -23,7 +23,7 @@ class SplashScreen(ctk.CTkToplevel):
         self._is_running = True  # Flag to track if splash screen is still active
         
         # Configure window
-        self.title("CPU Scheduler")
+        self.title("CHRONOS")
         self.attributes('-topmost', True)
         self.overrideredirect(True)  # Remove window decorations
         
@@ -54,19 +54,49 @@ class SplashScreen(ctk.CTkToplevel):
         main_frame.grid_rowconfigure(1, weight=0)
         main_frame.grid_rowconfigure(2, weight=0)
         
-        # Try to load banner image
+        # Try to load SVG logo first
+        logo_loaded = False
         try:
-            banner_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
-                                     "assets", "banner.png")
-            banner_image = ctk.CTkImage(Image.open(banner_path), size=(400, 180))
-            ctk.CTkLabel(main_frame, image=banner_image, text="").grid(row=0, column=0, pady=(20, 0))
-        except Exception:
-            # If image loading fails, show text banner instead
-            ctk.CTkLabel(main_frame, text="CPU SCHEDULER", font=ctk.CTkFont(size=36, weight="bold")).grid(
-                row=0, column=0, pady=(20, 0))
+            logo_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
+                                   "docs", "logo.svg")
+            
+            # Try using cairosvg to convert SVG
+            try:
+                from cairosvg import svg2png
+                import io
+                
+                # Convert SVG to PNG in memory
+                png_data = io.BytesIO()
+                svg2png(url=logo_path, write_to=png_data, output_width=200, output_height=200)
+                png_data.seek(0)
+                
+                # Create image from PNG data
+                logo_image = ctk.CTkImage(light_image=Image.open(png_data),
+                                       dark_image=Image.open(png_data),
+                                       size=(200, 200))
+                ctk.CTkLabel(main_frame, image=logo_image, text="").grid(
+                    row=0, column=0, pady=(20, 0))
+                logo_loaded = True
+            except ImportError:
+                print("cairosvg not available for SVG conversion")
+        except Exception as e:
+            print(f"Error loading logo SVG: {e}")
+            
+        # If SVG loading fails, try the banner image
+        if not logo_loaded:
+            try:
+                banner_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 
+                                         "docs", "logo.svg")
+                banner_image = ctk.CTkImage(Image.open(banner_path), size=(400, 180))
+                ctk.CTkLabel(main_frame, image=banner_image, text="").grid(row=0, column=0, pady=(20, 0))
+                logo_loaded = True
+            except Exception:
+                # If all image loading fails, show text banner with CHRONOS name
+                ctk.CTkLabel(main_frame, text="CHRONOS", font=ctk.CTkFont(size=36, weight="bold")).grid(
+                    row=0, column=0, pady=(20, 0))
         
         # Loading text
-        ctk.CTkLabel(main_frame, text="Operating Systems Project", 
+        ctk.CTkLabel(main_frame, text="CPU Scheduler Simulator", 
                    font=ctk.CTkFont(size=20)).grid(row=1, column=0, pady=(10, 20))
         
         # Progress bar

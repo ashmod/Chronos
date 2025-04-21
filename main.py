@@ -4,6 +4,8 @@ import time
 import os
 import threading
 import customtkinter as ctk
+from PIL import Image, ImageTk
+import tkinter as tk
 
 from src.gui.splash_screen import SplashScreen
 from src.gui.welcome_screen import WelcomeScreen
@@ -24,20 +26,15 @@ class CPUSchedulerApp:
             master: The root Tk window
         """
         self.master = master
-        self.master.title("CPU Scheduler")
+        self.master.title("CHRONOS")
         self.master.protocol("WM_DELETE_WINDOW", self.on_close)
         
         # Configure theme
         ctk.set_appearance_mode("dark")  # Options: "dark", "light"
         ctk.set_default_color_theme("blue")  # Options: "blue", "green", "dark-blue"
         
-        # Set window icon if available
-        try:
-            icon_path = os.path.join(os.path.dirname(__file__), "docs", "icon.ico")
-            if os.path.exists(icon_path):
-                self.master.iconbitmap(icon_path)
-        except Exception:
-            pass
+        # Set window icon using SVG logo
+        self.set_app_icon()
         
         # Configure window size and position
         window_width = 1200
@@ -65,6 +62,41 @@ class CPUSchedulerApp:
         # Show splash screen and then welcome screen
         self.master.withdraw()  # Hide main window until splash screen is done
         self.splash = SplashScreen(self.master, self.show_welcome_screen)
+    
+    def set_app_icon(self):
+        """Set the application icon using the SVG logo."""
+        try:
+            # Try to use logo.svg if supported
+            logo_path = os.path.join(os.path.dirname(__file__), "docs", "logo.svg")
+            
+            if not os.path.exists(logo_path):
+                # Fallback to icon.ico if SVG doesn't exist
+                icon_path = os.path.join(os.path.dirname(__file__), "docs", "icon.ico")
+                if os.path.exists(icon_path):
+                    self.master.iconbitmap(icon_path)
+                return
+                
+            # Try converting SVG to a format Tkinter can use
+            try:
+                from cairosvg import svg2png
+                import io
+                
+                # Convert SVG to PNG in memory
+                png_data = io.BytesIO()
+                svg2png(url=logo_path, write_to=png_data)
+                png_data.seek(0)
+                
+                # Create PhotoImage from PNG data
+                img = Image.open(png_data)
+                photo = ImageTk.PhotoImage(img)
+                self.master.iconphoto(True, photo)
+            except ImportError:
+                # Fallback to icon.ico if SVG handling isn't available
+                icon_path = os.path.join(os.path.dirname(__file__), "docs", "icon.ico")
+                if os.path.exists(icon_path):
+                    self.master.iconbitmap(icon_path)
+        except Exception as e:
+            print(f"Error setting application icon: {e}")
     
     def show_welcome_screen(self):
         """Show the welcome screen."""
