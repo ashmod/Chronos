@@ -77,38 +77,11 @@ class RoundRobinScheduler(Scheduler):
             self.current_process = self.ready_queue.popleft()
             self.current_quantum_used = 0
             # Record the first execution if not already set
-            if self.current_process.start_time is None:
-                self.current_process.start_time = current_time
+            if self.current_process.get_start_time() is None:
+                self.current_process.get_start_time() = current_time
 
         # If we have a current process, increment the quantum counter
         if self.current_process:
             self.current_quantum_used += 1
 
         return self.current_process
-
-    def run_tick(self) -> Optional[Process]:
-        """
-        Run a single tick of the simulation.
-
-        Returns:
-            Optional[Process]: The process that was executed in this tick, or None if CPU was idle
-        """
-        # Get the next process to execute
-        process = self.get_next_process(self.current_time)
-
-        # If there is a process to execute
-        if process:
-            # Execute the process for one time unit, passing the current time as required
-            process.execute(self.current_time)
-
-            # If the process has completed
-            if process.is_completed():
-                process.completion_time = self.current_time + 1
-                process.turnaround_time = process.completion_time - process.arrival_time
-                process.waiting_time = process.turnaround_time - process.burst_time
-                self.completed_processes.append(process)
-
-        # Increment current time
-        self.current_time += 1
-
-        return process

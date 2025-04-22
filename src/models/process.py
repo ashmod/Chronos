@@ -104,6 +104,9 @@ class Process:
     def get_pid(self) -> int:
         return self.__pid
 
+    def get_start_time(self) -> Optional[int]:
+        return self.__start_time
+    
     def get_arrival_time(self) -> int:
         return self.__arrival_time
 
