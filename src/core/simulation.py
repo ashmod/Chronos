@@ -1,6 +1,6 @@
 import time
-from models.process import Process
-from core.scheduler import Scheduler
+from src.models.process import Process
+from src.core.scheduler import Scheduler
 import threading
 
 
