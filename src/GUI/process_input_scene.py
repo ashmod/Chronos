@@ -23,29 +23,29 @@ class ProcessInputScene(QWidget):
         
         # Create simulation with initial scheduler
         # initial_scheduler = self._create_scheduler(self.algorithmComboBox.currentText())
-        self.simulation = Simulation(None)
+        # self.simulation = Simulation(None)
         self.next_pid = 1  # Add PID counter
         self.table_contents = []  # Store the processes in the table
-        self.editing_row = -1  # Row currently being edited
-        self.currently_editing = False  # Flag to check if we are in editing mode
+        # self.editing_row = -1  # Row currently being edited
+        # self.currently_editing = False  # Flag to check if we are in editing mode
         # Initialize UI elements
         self.setup_ui()
 
     def setup_ui(self):
-        # Set default process name
-        self.processNameTextBox.setText(f"Process {self.next_pid}")
-        
         # Connect signals
         self.addProcessButton.clicked.connect(self.add_process)
         self.removeProcessButton.clicked.connect(self.remove_process)
         self.editProcessButton.clicked.connect(self.edit_process)
         self.resetTableButton.clicked.connect(self.reset_table)
-        self.runLiveSimulationButton.clicked.connect(self.run_live_simulation)
-        self.runAtOnceButton.clicked.connect(self.run_at_once)
+        self.runLiveSimulationButton.clicked.connect(self.goto_run_live_simulation)
+        self.runAtOnceButton.clicked.connect(self.goto_run_at_once)
         self.algorithmComboBox.currentIndexChanged.connect(self.on_algorithm_changed)
         
         # Set up initial state (read algorithm from combo box right away)
         self.on_algorithm_changed()
+
+        # Set default process name
+        self.processNameTextBox.setText(f"Process {self.next_pid}")
 
     def update_time_quantum_visibility(self):
         # Show time quantum only for Round Robin
@@ -64,26 +64,6 @@ class ProcessInputScene(QWidget):
     def on_algorithm_changed(self):
         self.update_time_quantum_visibility()
         self.update_priority_visibility()
-        # Update scheduler when algorithm changes
-        self.simulation.scheduler = self._create_scheduler(self.algorithmComboBox.currentText())
-    
-    def _create_scheduler(self, algorithm_name: str) -> Scheduler:
-        """Create appropriate scheduler based on algorithm name"""
-        if "First-Come, First-Served" in algorithm_name:
-            return FCFSScheduler()
-        elif "Shortest Job First (Preemptive)" in algorithm_name:
-            return SJFPreemptiveScheduler()
-        elif "Shortest Job First (Non-Preemptive)" in algorithm_name:
-            return SJFNonPreemptiveScheduler()
-        elif "Priority (Preemptive)" in algorithm_name:
-            return PriorityPreemptiveScheduler()
-        elif "Priority (Non-Preemptive)" in algorithm_name:
-            return PriorityNonPreemptiveScheduler()
-        elif "Round Robin" in algorithm_name:
-            time_quantum = self.timeQuantumSpinBox.value() if hasattr(self, 'timeQuantumSpinBox') else 2
-            return RoundRobinScheduler(time_quantum)
-        else:
-            return FCFSScheduler()  # Default to FCFS
 
     def add_process(self):
         # Get values from input fields
@@ -131,16 +111,35 @@ class ProcessInputScene(QWidget):
         self.processTableWidget.removeRow(self.processTableWidget.selectedItems()[0].row())
 
     def edit_process(self):
-        # TODO: Implement process editing
         pass
-
+    
     def reset_table(self):
-                self.processTableWidget.setRowCount(0)  # Clear all rows in the table
-            
-    def run_live_simulation(self):
+        self.processTableWidget.setRowCount(0)  # Clear all rows in the table
+        self.next_pid = 1
+        self.processNameTextBox.setText(f"Process {self.next_pid}")
+
+    def _create_scheduler(self, algorithm_name: str) -> Scheduler:
+        """Create appropriate scheduler based on algorithm name"""
+        if "First-Come, First-Served" in algorithm_name:
+            return FCFSScheduler()
+        elif "Shortest Job First (Preemptive)" in algorithm_name:
+            return SJFPreemptiveScheduler()
+        elif "Shortest Job First (Non-Preemptive)" in algorithm_name:
+            return SJFNonPreemptiveScheduler()
+        elif "Priority (Preemptive)" in algorithm_name:
+            return PriorityPreemptiveScheduler()
+        elif "Priority (Non-Preemptive)" in algorithm_name:
+            return PriorityNonPreemptiveScheduler()
+        elif "Round Robin" in algorithm_name:
+            time_quantum = self.timeQuantumSpinBox.value() if hasattr(self, 'timeQuantumSpinBox') else 2
+            return RoundRobinScheduler(time_quantum)
+        else:
+            return FCFSScheduler()  # Default to FCFS
+        
+    def goto_run_live_simulation(self):
         # TODO: Implement live simulation launch
         pass
     
-    def run_at_once(self):
+    def goto_run_at_once(self):
         # TODO: Implement at-once simulation launch
         pass

@@ -20,9 +20,9 @@ class RunAtOnceScene(QWidget):
         # Create the canvas for the Gantt chart
         self.gantt_canvas = GanttCanvas(self)
         
-        # Set equal size policies for both widgets
-        self.frame.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self.frame_2.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        # # Set equal size policies for both widgets
+        # self.frame.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        # self.frame_2.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         
         # Set stretch factors in the main layout to make them equal
         main_layout = self.verticalLayout
@@ -35,9 +35,9 @@ class RunAtOnceScene(QWidget):
         layout.addWidget(self.gantt_canvas)
         self.ganttPlaceHolder.setLayout(layout)
         
-        # Set minimum heights to ensure they don't get too small
-        self.frame.setMinimumHeight(200)
-        self.frame_2.setMinimumHeight(200)
+        # # Set minimum heights to ensure they don't get too small
+        # self.frame.setMinimumHeight(200)
+        # self.frame_2.setMinimumHeight(200)
         
         # Connect return button signal
         self.returnToInputSceneButton.clicked.connect(self.return_to_input)

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>714</width>
-    <height>608</height>
+    <width>689</width>
+    <height>586</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -89,47 +89,6 @@
    <item row="4" column="1" colspan="3">
     <widget class="QLineEdit" name="processNameTextBox"/>
    </item>
-   <item row="5" column="0">
-    <widget class="QLabel" name="label_5">
-     <property name="text">
-      <string>Arrival Time</string>
-     </property>
-    </widget>
-   </item>
-   <item row="5" column="1" colspan="2">
-    <widget class="QSpinBox" name="arrivalTimeSpinBox"/>
-   </item>
-   <item row="6" column="0">
-    <widget class="QLabel" name="label_6">
-     <property name="text">
-      <string>Burst Time</string>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="1" colspan="2">
-    <widget class="QSpinBox" name="burstTimeSpinBox">
-     <property name="minimum">
-      <number>1</number>
-     </property>
-    </widget>
-   </item>
-   <item row="7" column="0">
-    <widget class="QLabel" name="label_7">
-     <property name="text">
-      <string>Priority</string>
-     </property>
-    </widget>
-   </item>
-   <item row="7" column="1" colspan="2">
-    <widget class="QSpinBox" name="prioritySpinBox"/>
-   </item>
-   <item row="8" column="0" colspan="2">
-    <widget class="QPushButton" name="addProcessButton">
-     <property name="text">
-      <string>Add Process</string>
-     </property>
-    </widget>
-   </item>
    <item row="9" column="0" colspan="6">
     <widget class="QTableWidget" name="processTableWidget">
      <property name="enabled">
@@ -180,10 +139,17 @@
      </column>
     </widget>
    </item>
-   <item row="10" column="4">
-    <widget class="QPushButton" name="editProcessButton">
+   <item row="6" column="0">
+    <widget class="QLabel" name="label_6">
      <property name="text">
-      <string>Edit Process</string>
+      <string>Burst Time</string>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="1" colspan="2">
+    <widget class="QSpinBox" name="burstTimeSpinBox">
+     <property name="minimum">
+      <number>1</number>
      </property>
     </widget>
    </item>
@@ -194,10 +160,37 @@
      </property>
     </widget>
    </item>
-   <item row="11" column="0">
-    <widget class="QPushButton" name="runLiveSimulationButton">
+   <item row="8" column="0" colspan="2">
+    <widget class="QPushButton" name="addProcessButton">
      <property name="text">
-      <string>Run Live Simulation</string>
+      <string>Add Process</string>
+     </property>
+    </widget>
+   </item>
+   <item row="10" column="4">
+    <widget class="QPushButton" name="editProcessButton">
+     <property name="text">
+      <string>Edit Process</string>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="0">
+    <widget class="QLabel" name="label_5">
+     <property name="text">
+      <string>Arrival Time</string>
+     </property>
+    </widget>
+   </item>
+   <item row="5" column="1" colspan="2">
+    <widget class="QSpinBox" name="arrivalTimeSpinBox"/>
+   </item>
+   <item row="7" column="1" colspan="2">
+    <widget class="QSpinBox" name="prioritySpinBox"/>
+   </item>
+   <item row="7" column="0">
+    <widget class="QLabel" name="label_7">
+     <property name="text">
+      <string>Priority</string>
      </property>
     </widget>
    </item>
@@ -205,6 +198,13 @@
     <widget class="QPushButton" name="runAtOnceButton">
      <property name="text">
       <string>Run At Once</string>
+     </property>
+    </widget>
+   </item>
+   <item row="11" column="0">
+    <widget class="QPushButton" name="runLiveSimulationButton">
+     <property name="text">
+      <string>Run Live Simulation</string>
      </property>
     </widget>
    </item>

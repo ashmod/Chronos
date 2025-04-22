@@ -16,5 +16,29 @@ class RunLiveScene(QWidget):
         self.setup_ui()
     
     def setup_ui(self):
-        # TODO: Connect signals and initialize UI state
+        # Connect signals
+        self.addLiveProcessButton.clicked.connect(self.add_live_process)
+        self.runLiveButton.clicked.connect(self.run_live)
+        self.runAllButton.clicked.connect(self.run_all)
+        self.pauseButton.clicked.connect(self.pause_simulation)  # Pause button
+        self.returnToInputSceneButton.clicked.connect(self.return_to_input)
+
+    def add_live_process(self):
+        # TODO: Add a new process during live simulation
+        pass
+
+    def run_live(self):
+        # TODO: Start the live simulation step by step
+        pass
+
+    def run_all(self):
+        # TODO: Run the simulation to completion
+        pass
+
+    def pause_simulation(self):
+        # TODO: Pause the current simulation
+        pass
+
+    def return_to_input(self):
+        # TODO: Return to the process input scene
         pass
