@@ -20,10 +20,10 @@ class MainWindow(QMainWindow):
         
         # Uncomment these lines to test different scenes:
         # --- Test Run Live Scene ---
-        self.setCentralWidget(self.run_live_scene)
+        # self.setCentralWidget(self.run_live_scene)
         
         # --- Test Run At Once Scene ---
-        self.setCentralWidget(self.run_at_once_scene)
+        # self.setCentralWidget(self.run_at_once_scene)
         
         # Example of how to switch scenes programmatically:
         # def switch_to_live_scene(self):

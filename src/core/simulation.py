@@ -11,40 +11,40 @@ class Simulation:
         self.running = False
         self.paused = False
 
-        # Callback hooks
-        self.process_update_callback: Optional[Callable[[List[Process], int], None]] = None
-        self.gantt_update_callback: Optional[Callable[[Optional[Process], int], None]] = None
-        self.stats_update_callback: Optional[Callable[[float, float], None]] = None
+        # # Callback hooks
+        # self.process_update_callback: Optional[Callable[[List[Process], int], None]] = None
+        # self.gantt_update_callback: Optional[Callable[[Optional[Process], int], None]] = None
+        # self.stats_update_callback: Optional[Callable[[float, float], None]] = None
 
-        # Optional event log (tick-based)
-        self.event_log: List[str] = []
+        # # Optional event log (tick-based)
+        # self.event_log: List[str] = []
 
-    def set_process_update_callback(self, callback: Callable[[List[Process], int], None]):
-        self.process_update_callback = callback
+    # def set_process_update_callback(self, callback: Callable[[List[Process], int], None]):
+    #     self.process_update_callback = callback
 
-    def set_gantt_update_callback(self, callback: Callable[[Optional[Process], int], None]):
-        self.gantt_update_callback = callback
+    # def set_gantt_update_callback(self, callback: Callable[[Optional[Process], int], None]):
+    #     self.gantt_update_callback = callback
 
-    def set_stats_update_callback(self, callback: Callable[[float, float], None]):
-        self.stats_update_callback = callback
+    # def set_stats_update_callback(self, callback: Callable[[float, float], None]):
+    #     self.stats_update_callback = callback
 
-    def _trigger_ui_updates(self, current_process: Optional[Process] = None):
-        if self.process_update_callback:
-            self.process_update_callback(self.scheduler.processes, self.scheduler.current_time)
-        if self.gantt_update_callback:
-            self.gantt_update_callback(current_process, self.scheduler.current_time)
-        if self.stats_update_callback:
-            avg_waiting, avg_turnaround = self.scheduler.calculate_metrics()
-            self.stats_update_callback(avg_waiting, avg_turnaround)
+    # def _trigger_ui_updates(self, current_process: Optional[Process] = None):
+    #     if self.process_update_callback:
+    #         self.process_update_callback(self.scheduler.processes, self.scheduler.current_time)
+    #     if self.gantt_update_callback:
+    #         self.gantt_update_callback(current_process, self.scheduler.current_time)
+    #     if self.stats_update_callback:
+    #         avg_waiting, avg_turnaround = self.scheduler.calculate_metrics()
+    #         self.stats_update_callback(avg_waiting, avg_turnaround)
 
     def _tick_once(self):
         current_process = self.scheduler.run_tick()
-        self._trigger_ui_updates(current_process)
-        self.event_log.append(f"[Time {self.scheduler.current_time}] Ran: {current_process.name if current_process else 'IDLE'}")
+        # self._trigger_ui_updates(current_process)
+        # self.event_log.append(f"[Time {self.scheduler.current_time}] Ran: {current_process.name if current_process else 'IDLE'}")
 
     def add_process(self, process: Process):
         self.scheduler.add_process(process)
-        self._trigger_ui_updates()
+        # self._trigger_ui_updates()
 
     def add_live_process(self, name: str, burst_time: int, priority: int, pid: int) -> Process:
         process = Process(
@@ -55,17 +55,17 @@ class Simulation:
             priority=priority
         )
         self.scheduler.add_process(process)
-        self._trigger_ui_updates()
+        # self._trigger_ui_updates()
         return process
 
     def remove_process(self, pid: int):
         self.scheduler.remove_process(pid)
-        self._trigger_ui_updates()
+        # self._trigger_ui_updates()
 
     def remove_all_processes(self):
         self.scheduler.processes.clear()
         self.scheduler.reset_state()
-        self._trigger_ui_updates()
+        # self._trigger_ui_updates()
 
     def reset(self, mode: Literal["full", "soft", "progress_only"] = "full"):
         """
@@ -76,15 +76,15 @@ class Simulation:
         """
         if mode == "full":
             self.scheduler.processes.clear()
-            self.scheduler.reset()
+            self.scheduler.reset_state()
         elif mode == "soft":
             self.scheduler.reset_state()
         elif mode == "progress_only":
             for process in self.scheduler.processes:
-                process.reset_progress()
+                process.reset()
             self.scheduler.completed_processes.clear()
 
-        self._trigger_ui_updates()
+        # self._trigger_ui_updates()
 
     def start(self):
         self.running = True
@@ -138,9 +138,9 @@ class Simulation:
         entries = [(p, start, end) for p in self.scheduler.processes for start, end in p.execution_history]
         return sorted(entries, key=lambda x: x[1])
 
-    def has_results(self) -> bool:
-        return (
-            self.scheduler.current_time > 0 or
-            len(self.scheduler.completed_processes) > 0 or
-            any(p.start_time is not None for p in self.scheduler.processes)
-        )
+    # def has_results(self) -> bool:
+    #     return (
+    #         self.scheduler.current_time > 0 or
+    #         len(self.scheduler.completed_processes) > 0 or
+    #         any(p.start_time is not None for p in self.scheduler.processes)
+    #     )

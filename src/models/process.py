@@ -39,10 +39,6 @@ class Process:
         self.first_run_time = None
         self.execution_history = []
         
-    def reset_progress(self):
-        """Reset the progress of the process (alias for reset)."""
-        self.reset()
-        
     def is_completed(self):
         """Check if the process has completed execution."""
         return self.remaining_time <= 0
