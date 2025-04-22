@@ -32,5 +32,5 @@ class SJFPreemptiveScheduler(Scheduler):
         # If there are processes with the same remaining time, we sort by arrival time
         # If arrival times are also the same, we sort by PID
         return sorted(
-            ready_processes, key=lambda p: (p.remaining_time, p.arrival_time, p.pid)
+            ready_processes, key=lambda p: (p.get_remaining_time(), p.get_arrival_time(), p.get_pid())
         )[0]
