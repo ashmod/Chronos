@@ -3,24 +3,22 @@ import tkinter as tk
 import customtkinter as ctk
 from tkinter import ttk, messagebox
 import time
-import matplotlib
-matplotlib.use("TkAgg")
-from matplotlib.figure import Figure
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import matplotlib.patches as patches
-import numpy as np
+import colorsys
 import csv
 import random
 from ..core.simulation import Simulation
 from ..models.process import Process
 
-# Define dark theme colors for matplotlib and ttk
-DARK_BG = "#2b2b2b"
-DARK_FG = "#DCE4EE"
-DARK_GRID = "#444444"
-DARK_AXES = "#333333"
-DARK_TOOLTIP_BG = "#3f3f3f"
-DARK_TOOLTIP_FG = "#ffffff"
+# Define modern theme colors
+DARK_BG = "#1E1E2E"           # Dark background
+DARK_FG = "#CDD6F4"           # Light text color
+DARK_GRID = "#313244"         # Grid lines color
+DARK_AXES = "#45475A"         # Header/axes color
+DARK_HIGHLIGHT = "#89B4FA"    # Selection highlight
+DARK_TOOLTIP_BG = "#313244"   # Tooltip background
+DARK_TOOLTIP_FG = "#CDD6F4"   # Tooltip text
+ACCENT_COLOR = "#F5C2E7"      # Accent color for active items
+PROCESS_BASE_COLOR = "#94E2D5" # Base color for processes
 
 class SimulationScreen(ctk.CTkFrame):
     """
@@ -46,6 +44,9 @@ class SimulationScreen(ctk.CTkFrame):
         self.simulation_thread = None
         self.process_colors = {}
         self.next_pid = 1
+        self.timeline_entries = []
+        self.current_time_marker = None
+        self.gantt_cells = {}
 
         # Set up the UI
         self._setup_ui()
@@ -67,7 +68,7 @@ class SimulationScreen(ctk.CTkFrame):
         main_content_frame.rowconfigure(0, weight=2)  # Gantt chart
         main_content_frame.rowconfigure(1, weight=1)  # Process table
 
-        # Set up the Gantt chart
+        # Set up the redesigned Gantt chart
         self._setup_gantt_chart(main_content_frame)
 
         # Set up the process table
@@ -118,167 +119,570 @@ class SimulationScreen(ctk.CTkFrame):
         back_button.grid(row=0, column=1, sticky="e", padx=5)
 
     def _setup_gantt_chart(self, parent):
-        """Set up the Gantt chart visualization with dark theme and scrollbars."""
+        """Set up a simplified timeline visualization to replace the traditional Gantt chart."""
         gantt_frame = ctk.CTkFrame(parent)
         gantt_frame.grid(row=0, column=0, sticky="nsew", padx=0, pady=(0, 5))
         gantt_frame.columnconfigure(0, weight=1)
-        gantt_frame.rowconfigure(0, weight=1)
-        
-        # Main frame to hold canvas and scrollbars
-        gantt_container = ctk.CTkFrame(gantt_frame)
-        gantt_container.grid(row=0, column=0, sticky="nsew")
-        gantt_container.grid_columnconfigure(0, weight=1)
-        gantt_container.grid_rowconfigure(0, weight=1)
+        gantt_frame.rowconfigure(0, weight=0)  # Title
+        gantt_frame.rowconfigure(1, weight=1)  # Timeline content
 
-        # Create a matplotlib figure for the Gantt chart with dark background
-        self.figure = Figure(figsize=(5, 4), dpi=100, facecolor=DARK_BG)
-        
-        # Create a special layout with time axis at the top
-        gs = self.figure.add_gridspec(1, 1)
-        self.ax = self.figure.add_subplot(gs[0, 0])
-        self.ax.set_facecolor(DARK_AXES)
-        
-        # Configure colors for axes and ticks
-        self.ax.spines['bottom'].set_color(DARK_FG)
-        self.ax.spines['top'].set_color(DARK_FG)
-        self.ax.spines['left'].set_color(DARK_FG)
-        self.ax.spines['right'].set_color(DARK_FG)
-        self.ax.xaxis.label.set_color(DARK_FG)
-        self.ax.yaxis.label.set_color(DARK_FG)
-        self.ax.tick_params(axis='x', colors=DARK_FG)
-        self.ax.tick_params(axis='y', colors=DARK_FG)
-        self.ax.title.set_color(DARK_FG)
+        # Timeline title with zoom and navigation controls
+        title_frame = ctk.CTkFrame(gantt_frame, fg_color="transparent")
+        title_frame.grid(row=0, column=0, sticky="ew", padx=5, pady=(5, 2))
+        title_frame.columnconfigure(0, weight=1)  # Title
+        title_frame.columnconfigure(1, weight=0)  # Controls
 
-        # Create canvas and scrollbars
-        self.canvas = FigureCanvasTkAgg(self.figure, gantt_container)
-        self.canvas_widget = self.canvas.get_tk_widget()
-        self.canvas_widget.configure(bg=gantt_container.cget("fg_color")[1])
+        # Title
+        title_label = ctk.CTkLabel(title_frame, text="CPU Execution Timeline", 
+                                  font=("Segoe UI", 14, "bold"))
+        title_label.grid(row=0, column=0, sticky="w")
         
-        # Add horizontal scrollbar
-        self.h_scrollbar = ctk.CTkScrollbar(gantt_container, orientation="horizontal", command=self._on_h_scroll)
+        # Controls container frame 
+        controls_frame = ctk.CTkFrame(title_frame, fg_color="transparent")
+        controls_frame.grid(row=0, column=1, sticky="e")
         
-        # Add vertical scrollbar
-        self.v_scrollbar = ctk.CTkScrollbar(gantt_container, orientation="vertical", command=self._on_v_scroll)
+        # Horizontal navigation frame (NEW)
+        nav_frame = ctk.CTkFrame(controls_frame, fg_color=DARK_BG)
+        nav_frame.grid(row=0, column=0, padx=(0, 10))
         
-        # Place canvas and scrollbars
-        self.canvas_widget.grid(row=0, column=0, sticky="nsew")
-        self.h_scrollbar.grid(row=1, column=0, sticky="ew")
-        self.v_scrollbar.grid(row=0, column=1, sticky="ns")
+        # Jump to start button
+        start_btn = ctk.CTkButton(nav_frame, text="⏮", width=30, height=30,
+                                command=self._scroll_to_start, corner_radius=5)
+        start_btn.grid(row=0, column=0, padx=2)
         
-        # Configure scrollable area
-        gantt_container.grid_rowconfigure(0, weight=1)
-        gantt_container.grid_columnconfigure(0, weight=1)
+        # Scroll left button
+        left_btn = ctk.CTkButton(nav_frame, text="◀", width=30, height=30, 
+                               command=self._scroll_left, corner_radius=5)
+        left_btn.grid(row=0, column=1, padx=2)
         
-        # Set up initial Gantt chart
-        self._init_gantt_chart()
+        # Scroll right button
+        right_btn = ctk.CTkButton(nav_frame, text="▶", width=30, height=30,
+                                command=self._scroll_right, corner_radius=5)
+        right_btn.grid(row=0, column=2, padx=2)
+        
+        # Jump to end button
+        end_btn = ctk.CTkButton(nav_frame, text="⏭", width=30, height=30,
+                              command=self._scroll_to_end, corner_radius=5)
+        end_btn.grid(row=0, column=3, padx=2)
+        
+        # Center view button (to current time)
+        center_btn = ctk.CTkButton(nav_frame, text="⌖", width=30, height=30,
+                                 command=self._center_time_marker, corner_radius=5)
+        center_btn.grid(row=0, column=4, padx=2)
+        
+        # Zoom control frame
+        zoom_frame = ctk.CTkFrame(controls_frame, fg_color=DARK_BG)
+        zoom_frame.grid(row=0, column=1)
+        
+        # Zoom out button
+        zoom_out_btn = ctk.CTkButton(zoom_frame, text="-", width=30, height=30, 
+                                   command=self._zoom_out_gantt, corner_radius=5)
+        zoom_out_btn.grid(row=0, column=0, padx=2)
+        
+        # Zoom in button
+        zoom_in_btn = ctk.CTkButton(zoom_frame, text="+", width=30, height=30,
+                                  command=self._zoom_in_gantt, corner_radius=5)
+        zoom_in_btn.grid(row=0, column=1, padx=2)
+        
+        # Reset zoom button
+        reset_zoom_btn = ctk.CTkButton(zoom_frame, text="↺", width=30, height=30,
+                                     command=self._reset_zoom_gantt, corner_radius=5)
+        reset_zoom_btn.grid(row=0, column=2, padx=2)
 
-        # Add tooltip for hover information
-        self.tooltip = ctk.CTkLabel(self, text="", corner_radius=5, fg_color=DARK_TOOLTIP_BG, text_color=DARK_TOOLTIP_FG)
+        # Create a frame for the timeline with scrollbars
+        table_container = ctk.CTkFrame(gantt_frame)
+        table_container.grid(row=1, column=0, sticky="nsew", padx=5, pady=5)
+        table_container.columnconfigure(0, weight=1)
+        table_container.rowconfigure(0, weight=1)
 
-        # Initial visible ranges for x and y axes
-        self.x_view_range = [0, 20]  # [start, end] for x-axis view
-        self.y_view_range = [0, 10]  # [start, end] for y-axis view
-        self.current_max_time = 20   # Keep track of maximum time
-
-        # Bind mouse events for interactions
-        self.canvas.mpl_connect("motion_notify_event", self._on_hover)
-        self.canvas.mpl_connect("axes_leave_event", lambda event: self.tooltip.place_forget())
+        # Create a canvas for scrolling with improved configuration
+        self.gantt_canvas = tk.Canvas(table_container, bg=DARK_BG, highlightthickness=0)
         
-    def _on_h_scroll(self, *args):
-        """Handle horizontal scrolling of the Gantt chart."""
-        if not hasattr(self, 'x_view_range') or not self.simulation:
-            return
+        # Scrollbars with enhanced interaction
+        h_scrollbar = ctk.CTkScrollbar(table_container, orientation="horizontal", 
+                                      command=self.gantt_canvas.xview)
+        v_scrollbar = ctk.CTkScrollbar(table_container, orientation="vertical", 
+                                      command=self.gantt_canvas.yview)
+        
+        self.gantt_canvas.configure(xscrollcommand=h_scrollbar.set, yscrollcommand=v_scrollbar.set)
+        
+        # Place elements
+        self.gantt_canvas.grid(row=0, column=0, sticky="nsew")
+        h_scrollbar.grid(row=1, column=0, sticky="ew")
+        v_scrollbar.grid(row=0, column=1, sticky="ns")
 
-        # Get the scroll movement
-        if len(args) > 1:
-            scroll_type = args[0]
-            amount = args[1]
+        # Create a frame inside the canvas for the timeline content
+        self.gantt_content = ctk.CTkFrame(self.gantt_canvas, fg_color=DARK_BG)
+        self.gantt_canvas_window = self.gantt_canvas.create_window(
+            (0, 0), window=self.gantt_content, anchor="nw"
+        )
+
+        # Bind canvas resize to update scroll region
+        self.gantt_canvas.bind("<Configure>", self._on_canvas_configure)
+        self.gantt_content.bind("<Configure>", self._on_content_configure)
+        
+        # Add enhanced mouse wheel scrolling capabilities
+        self.gantt_canvas.bind("<MouseWheel>", self._on_mousewheel_y)  # Windows/MacOS vertical scroll
+        self.gantt_canvas.bind("<Shift-MouseWheel>", self._on_mousewheel_x)  # Horizontal scroll with Shift
+        self.gantt_canvas.bind("<Button-4>", self._on_mousewheel_y)  # Linux scroll up
+        self.gantt_canvas.bind("<Button-5>", self._on_mousewheel_y)  # Linux scroll down
+        self.gantt_canvas.bind("<Shift-Button-4>", self._on_mousewheel_x)  # Linux horizontal scroll
+        self.gantt_canvas.bind("<Shift-Button-5>", self._on_mousewheel_x)  # Linux horizontal scroll
+        
+        # Add drag-to-scroll capability
+        self.gantt_canvas.bind("<ButtonPress-1>", self._start_drag_scroll)
+        self.gantt_canvas.bind("<B1-Motion>", self._do_drag_scroll)
+        
+        # Add keyboard navigation for the canvas
+        self.gantt_canvas.bind("<Key-Left>", lambda e: self.gantt_canvas.xview_scroll(-1, "units"))
+        self.gantt_canvas.bind("<Key-Right>", lambda e: self.gantt_canvas.xview_scroll(1, "units"))
+        self.gantt_canvas.bind("<Key-Up>", lambda e: self.gantt_canvas.yview_scroll(-1, "units"))
+        self.gantt_canvas.bind("<Key-Down>", lambda e: self.gantt_canvas.yview_scroll(1, "units"))
+        self.gantt_canvas.bind("<Key-Page_Up>", lambda e: self.gantt_canvas.yview_scroll(-5, "units"))
+        self.gantt_canvas.bind("<Key-Page_Down>", lambda e: self.gantt_canvas.yview_scroll(5, "units"))
+        self.gantt_canvas.bind("<Key-Home>", lambda e: self.gantt_canvas.xview_moveto(0))
+        self.gantt_canvas.bind("<Key-End>", lambda e: self.gantt_canvas.xview_moveto(1))
+        
+        # Make the canvas focusable to enable keyboard navigation
+        self.gantt_canvas.config(takefocus=1)
+        
+        # Create tooltip for hovering over timeline segments
+        self.tooltip = ctk.CTkLabel(
+            self, text="", corner_radius=6, 
+            fg_color=DARK_TOOLTIP_BG, text_color=DARK_TOOLTIP_FG
+        )
+        
+        # Initialize zoom level
+        self.gantt_zoom_level = 1.0
+        self.gantt_cell_width = 40  # Base width
+        self.gantt_row_height = 35   # Base height
+        
+        # Horizontal scroll state - for smoother continuous scrolling
+        self.h_scroll_active = False
+        self.h_scroll_direction = 0
+        self.h_scroll_after_id = None
+        
+        # Drag scroll state
+        self._drag_scroll_x = 0
+        self._drag_scroll_y = 0
+        
+        # Initialize the timeline visualization
+        self._init_gantt_chart(time_units=30)
+
+    def _on_canvas_configure(self, event):
+        """Handle canvas resizing to update the inner frame width."""
+        # Update the width of the inner frame to match the canvas
+        # This helps with horizontal scrolling when content is smaller than canvas
+        canvas_width = event.width
+        content_width = self.gantt_content.winfo_reqwidth()
+        
+        # Set the inner frame width to be at least the canvas width
+        # This prevents the scrollbar from disappearing when content is narrow
+        new_width = max(canvas_width, content_width)
+        self.gantt_canvas.itemconfig(self.gantt_canvas_window, width=new_width)
+        
+        # Update scroll region after adjusting width
+        self._on_content_configure(None) # Pass None as event is not needed here
+
+    def _on_content_configure(self, event):
+        """Update the scroll region when the content size changes."""
+        if self.gantt_canvas:
+            # Use bbox("all") to get the bounding box of all items in the canvas
+            scroll_region = self.gantt_canvas.bbox("all")
+            if scroll_region:
+                self.gantt_canvas.configure(scrollregion=scroll_region)
+            else:
+                # Handle case where canvas is empty
+                self.gantt_canvas.configure(scrollregion=(0, 0, 0, 0))
+
+    def _init_gantt_chart(self, time_units=30, max_display_processes=8):
+        """Initialize an empty timeline visualization with modern styling and continuous cells."""
+        # Clear any existing content
+        for widget in self.gantt_content.winfo_children():
+            widget.destroy()
+        
+        self.gantt_cells = {}
+        self.timeline_entries = []
+        
+        # Set a proper background for the gantt content area
+        self.gantt_content.configure(fg_color=DARK_BG)
+        
+        # Calculate dynamic cell width based on zoom
+        time_cell_width = int(self.gantt_cell_width * self.gantt_zoom_level)
+        row_height = int(self.gantt_row_height) # Keep row height constant for now
+        
+        # Configure the grid with fixed size cells - ensure predictable layout
+        process_col_width = 150 # Fixed width for process names
+        self.gantt_content.columnconfigure(0, weight=0, minsize=process_col_width)
+        
+        # Set up time unit columns - start from 1 instead of 0
+        for i in range(1, time_units + 1):
+            # Fixed width columns with no weight to prevent stretching
+            self.gantt_content.columnconfigure(i, weight=0, minsize=time_cell_width)
             
-            range_width = self.x_view_range[1] - self.x_view_range[0]
+            # Add time labels with improved styling - show i instead of i-1 to start from 1
+            time_label = ctk.CTkLabel(
+                self.gantt_content, 
+                text=str(i), 
+                width=time_cell_width, 
+                height=25, 
+                fg_color=DARK_AXES, 
+                text_color=DARK_FG,
+                corner_radius=0,
+                font=("Segoe UI", 10)
+            )
+            time_label.grid(row=0, column=i, sticky="nsew", padx=0, pady=0)
+        
+        # Process column header with improved styling
+        header_label = ctk.CTkLabel(
+            self.gantt_content, 
+            text="Process", 
+            width=process_col_width, 
+            height=25, 
+            fg_color=DARK_AXES,
+            text_color=DARK_FG, 
+            corner_radius=0,
+            font=("Segoe UI", 10, "bold")
+        )
+        header_label.grid(row=0, column=0, sticky="nsew", padx=0, pady=0)
+        
+        # Create empty row slots for processes with consistent styling
+        for row in range(1, max_display_processes + 1):
+            # Process name cell with improved styling - no padding
+            process_label = ctk.CTkLabel(
+                self.gantt_content, 
+                text="", 
+                width=process_col_width, 
+                height=row_height, 
+                fg_color=DARK_GRID,
+                text_color=DARK_FG,
+                corner_radius=0
+            )
+            process_label.grid(row=row, column=0, sticky="nsew", padx=0, pady=0)
             
-            # Calculate movement based on scroll action
-            if scroll_type == "moveto":
-                # Convert from fraction (0-1) to time units
-                new_start = float(amount) * (self.current_max_time - range_width)
-                self.x_view_range[0] = max(0, int(new_start))
-                self.x_view_range[1] = self.x_view_range[0] + range_width
-            elif scroll_type == "scroll":
-                # Amount is in scroll units, convert to time units
-                movement = int(float(amount) * 3)  # Adjust the scrolling speed
-                self.x_view_range[0] = max(0, self.x_view_range[0] + movement)
-                self.x_view_range[1] = self.x_view_range[0] + range_width
+            # Empty cells for time units - no padding for continuous display
+            for col in range(1, time_units + 1):
+                # Create a cell with fixed size and minimal borders
+                cell = ctk.CTkFrame(
+                    self.gantt_content,
+                    width=time_cell_width, 
+                    height=row_height,
+                    fg_color=DARK_BG,
+                    border_width=1,
+                    border_color=DARK_GRID,
+                    corner_radius=0
+                )
+                cell.grid(row=row, column=col, sticky="nsew", padx=0, pady=0)
                 
-                # Don't go beyond the max time 
-                if self.x_view_range[1] > self.current_max_time + 5:
-                    self.x_view_range[1] = self.current_max_time + 5
-                    self.x_view_range[0] = max(0, self.x_view_range[1] - range_width)
-            
-            # Update the axis and redraw
-            self.ax.set_xlim(self.x_view_range[0], self.x_view_range[1])
-            self.canvas.draw()
-            
-    def _on_v_scroll(self, *args):
-        """Handle vertical scrolling of the Gantt chart."""
-        if not hasattr(self, 'y_view_range') or not self.simulation or not self.scheduler.processes:
+                # Make sure the cell doesn't expand internally
+                cell.grid_propagate(False)
+                
+                # Store cell reference in our tracking dictionary with adjusted time values
+                if row not in self.gantt_cells:
+                    self.gantt_cells[row] = {}
+                self.gantt_cells[row][col] = {
+                    'widget': cell,
+                    'process': None,
+                    'start': col,  # Time now starts at 1 (col instead of col-1)
+                    'end': col + 1
+                }
+                
+                # Improved tooltip behavior
+                cell.bind("<Enter>", lambda e, r=row, c=col: self._show_cell_tooltip(r, c, e))
+                cell.bind("<Leave>", lambda e: self.tooltip.place_forget())
+
+        # Current time marker (placeholder, will be created when simulation runs)
+        self.current_time_marker = None
+        
+        # Initialize visible row indices for scrolling
+        self.visible_start_row = 1
+        self.max_visible_rows = max_display_processes
+        
+        # Update scroll region after initialization
+        self.gantt_content.update_idletasks() # Ensure widgets are drawn
+        self.gantt_canvas.configure(scrollregion=self.gantt_canvas.bbox("all"))
+
+    def _expand_gantt_chart(self, new_time_units):
+        """Expand the timeline to accommodate more time units."""
+        current_columns = len(self.gantt_content.grid_slaves(row=0)) - 1  # Subtract process column
+        if new_time_units <= current_columns:
             return
             
-        processes_count = len(self.scheduler.processes)
+        # Calculate dynamic cell width based on zoom
+        time_cell_width = int(self.gantt_cell_width * self.gantt_zoom_level)
+        row_height = int(self.gantt_row_height)
         
-        # Get the scroll movement
-        if len(args) > 1:
-            scroll_type = args[0]
-            amount = args[1]
+        # Add new time columns
+        for i in range(current_columns + 1, new_time_units + 1):
+            # Fixed width columns with no weight to prevent stretching
+            self.gantt_content.columnconfigure(i, weight=0, minsize=time_cell_width)
             
-            visible_processes = self.y_view_range[1] - self.y_view_range[0]
+            # Add time label with consistent styling - no padding
+            time_label = ctk.CTkLabel(
+                self.gantt_content, 
+                text=str(i), 
+                width=time_cell_width, 
+                height=25, 
+                fg_color=DARK_AXES,
+                text_color=DARK_FG,
+                corner_radius=0,
+                font=("Segoe UI", 10)
+            )
+            time_label.grid(row=0, column=i, sticky="nsew", padx=0, pady=0)
             
-            # Calculate movement based on scroll action
-            if scroll_type == "moveto":
-                # Convert from fraction (0-1) to process indices
-                new_top = float(amount) * (processes_count - visible_processes)
-                self.y_view_range[0] = max(0, int(new_top))
-                self.y_view_range[1] = min(processes_count, self.y_view_range[0] + visible_processes)
-            elif scroll_type == "scroll":
-                # Amount is in scroll units, convert to process indices
-                movement = int(float(amount))  # Keep 1:1 movement
-                self.y_view_range[0] = max(0, self.y_view_range[0] + movement)
-                self.y_view_range[1] = min(processes_count, self.y_view_range[0] + visible_processes)
+            # Add empty cells for each process row - no padding for continuous display
+            for row in range(1, len(self.gantt_cells) + 1):
+                cell = ctk.CTkFrame(
+                    self.gantt_content,
+                    width=time_cell_width, 
+                    height=row_height,
+                    fg_color=DARK_BG,
+                    border_width=1,
+                    border_color=DARK_GRID,
+                    corner_radius=0
+                )
+                cell.grid(row=row, column=i, sticky="nsew", padx=0, pady=0)
+                
+                # Make sure the cell doesn't expand internally
+                cell.grid_propagate(False)
+                
+                # Store cell reference with proper tracking info
+                self.gantt_cells[row][i] = {
+                    'widget': cell,
+                    'process': None,
+                    'start': i,
+                    'end': i + 1
+                }
+                
+                # Bind hover events for tooltip with the same behavior
+                cell.bind("<Enter>", lambda e, r=row, c=i: self._show_cell_tooltip(r, c, e))
+                cell.bind("<Leave>", lambda e: self.tooltip.place_forget())
+        
+        # Update scroll region after expansion
+        self.gantt_content.update_idletasks() # Ensure widgets are drawn
+        self.gantt_canvas.configure(scrollregion=self.gantt_canvas.bbox("all"))
+
+    def _expand_process_rows(self, num_processes):
+        """Expand the timeline visualization to accommodate more processes."""
+        current_rows = len(self.gantt_cells)
+        if num_processes <= current_rows:
+            return
             
-            # Update the axis and redraw
-            self._update_gantt_chart(self.scheduler.current_process, self.scheduler.current_time)
-
-    def _init_gantt_chart(self):
-        """Initialize the Gantt chart with dark theme styling."""
-        self.ax.clear()
-        self.ax.set_title("CPU Scheduling Gantt Chart", color=DARK_FG)
-        self.ax.set_xlabel("Time", color=DARK_FG)
-        self.ax.set_ylabel("Processes", color=DARK_FG)
-        self.ax.set_xlim(0, 20)  # Initial time window
+        # Calculate dynamic cell width based on zoom
+        time_cell_width = int(self.gantt_cell_width * self.gantt_zoom_level)
+        row_height = int(self.gantt_row_height)
+        process_col_width = 150
         
-        # Fixed integer ticks for the x-axis
-        self.ax.xaxis.set_major_locator(matplotlib.ticker.MultipleLocator(1))
+        # Get number of columns
+        columns = len(self.gantt_content.grid_slaves(row=0))
         
-        # Set grid color
-        self.ax.grid(True, which='both', axis='x', linestyle='--', linewidth=0.5, color=DARK_GRID)
-
-        # Re-apply axis/tick colors after clear
-        self.ax.set_facecolor(DARK_AXES)
-        self.ax.spines['bottom'].set_color(DARK_FG)
-        self.ax.spines['top'].set_color(DARK_FG)
-        self.ax.spines['left'].set_color(DARK_FG)
-        self.ax.spines['right'].set_color(DARK_FG)
-        self.ax.tick_params(axis='x', colors=DARK_FG)
-        self.ax.tick_params(axis='y', colors=DARK_FG)
-
-        # Move x-axis to the top
-        self.ax.xaxis.set_ticks_position('top')
-        self.ax.xaxis.set_label_position('top')
-
-        self.figure.tight_layout()
-        self.canvas.draw()
-
-        # Store gantt data for tooltips
-        self.gantt_bars = []
+        # Add new rows for processes
+        for row in range(current_rows + 1, num_processes + 1):
+            # Process name cell with improved styling - no padding for continuous display
+            process_label = ctk.CTkLabel(
+                self.gantt_content, 
+                text="", 
+                width=process_col_width, 
+                height=row_height, 
+                fg_color=DARK_GRID,
+                text_color=DARK_FG,
+                corner_radius=0
+            )
+            process_label.grid(row=row, column=0, sticky="nsew", padx=0, pady=0)
+            
+            # Empty cells for time units - no padding for continuous display
+            self.gantt_cells[row] = {}
+            for col in range(1, columns):
+                # Create a cell with consistent styling
+                cell = ctk.CTkFrame(
+                    self.gantt_content,
+                    width=time_cell_width, 
+                    height=row_height,
+                    fg_color=DARK_BG,
+                    border_width=1,
+                    border_color=DARK_GRID,
+                    corner_radius=0
+                )
+                cell.grid(row=row, column=col, sticky="nsew", padx=0, pady=0)
+                
+                # Make sure the cell doesn't expand internally
+                cell.grid_propagate(False)
+                
+                # Store cell reference with proper tracking info
+                self.gantt_cells[row][col] = {
+                    'widget': cell,
+                    'process': None,
+                    'start': col,
+                    'end': col + 1
+                }
+                
+                # Bind hover events for tooltip with the same behavior
+                cell.bind("<Enter>", lambda e, r=row, c=col: self._show_cell_tooltip(r, c, e))
+                cell.bind("<Leave>", lambda e: self.tooltip.place_forget())
         
+        # Update scroll region after expansion
+        self.gantt_content.update_idletasks() # Ensure widgets are drawn
+        self.gantt_canvas.configure(scrollregion=self.gantt_canvas.bbox("all"))
+    
+    # --- Gantt Chart Scrolling and Zooming Methods ---
+
+    def _scroll_left(self, event=None):
+        """Scroll the Gantt chart view to the left."""
+        self.gantt_canvas.xview_scroll(-1, "units")
+
+    def _scroll_right(self, event=None):
+        """Scroll the Gantt chart view to the right."""
+        self.gantt_canvas.xview_scroll(1, "units")
+
+    def _scroll_to_start(self, event=None):
+        """Scroll the Gantt chart view to the beginning (time 0)."""
+        self.gantt_canvas.xview_moveto(0)
+
+    def _scroll_to_end(self, event=None):
+        """Scroll the Gantt chart view to the end."""
+        self.gantt_canvas.xview_moveto(1)
+
+    def _center_time_marker(self, event=None):
+        """Scroll the Gantt chart to center the current time marker."""
+        if not self.current_time_marker:
+            return
+
+        # Get the column index of the time marker
+        marker_info = self.current_time_marker.grid_info()
+        if not marker_info: return
+        
+        col = marker_info.get('column', 0)
+        if col == 0: return # Should not happen if marker exists
+
+        # Calculate the total number of columns (time units + process name col)
+        total_cols = len(self.gantt_content.grid_slaves(row=0))
+        if total_cols <= 1: return
+
+        # Calculate the fraction to move to, aiming to center the column
+        # Get canvas width in pixels and estimate visible columns
+        canvas_width_px = self.gantt_canvas.winfo_width()
+        cell_width_px = int(self.gantt_cell_width * self.gantt_zoom_level)
+        process_col_width = 150
+        
+        # Estimate visible time columns (excluding process name column)
+        visible_time_cols = (canvas_width_px - process_col_width) / cell_width_px if cell_width_px > 0 else 1
+        
+        # Calculate the target starting column to center the marker column
+        target_start_col = max(1, col - (visible_time_cols / 2))
+        
+        # Calculate the fraction based on the target start column and total columns
+        # We need to account for the width of the process name column
+        total_content_width = process_col_width + (total_cols - 1) * cell_width_px
+        target_x_pos = process_col_width + (target_start_col - 1) * cell_width_px
+        
+        fraction = target_x_pos / total_content_width if total_content_width > 0 else 0
+        fraction = max(0, min(1, fraction)) # Clamp between 0 and 1
+
+        self.gantt_canvas.xview_moveto(fraction)
+
+    def _on_mousewheel_y(self, event):
+        """Handle vertical mouse wheel scrolling."""
+        # Determine scroll direction and amount
+        if event.num == 5 or event.delta < 0:  # Scroll down (Linux/Windows)
+            self.gantt_canvas.yview_scroll(1, "units")
+        elif event.num == 4 or event.delta > 0:  # Scroll up (Linux/Windows)
+            self.gantt_canvas.yview_scroll(-1, "units")
+
+    def _on_mousewheel_x(self, event):
+        """Handle horizontal mouse wheel scrolling (Shift + Wheel)."""
+        # Determine scroll direction and amount
+        if event.num == 5 or event.delta < 0:  # Scroll right (Linux/Windows)
+            self.gantt_canvas.xview_scroll(2, "units") # Scroll faster horizontally
+        elif event.num == 4 or event.delta > 0:  # Scroll left (Linux/Windows)
+            self.gantt_canvas.xview_scroll(-2, "units") # Scroll faster horizontally
+
+    def _start_drag_scroll(self, event):
+        """Record the starting position for drag scrolling."""
+        self.gantt_canvas.focus_set() # Ensure canvas has focus for keyboard events too
+        self.gantt_canvas.scan_mark(event.x, event.y)
+        self._drag_scroll_x = event.x
+        self._drag_scroll_y = event.y
+
+    def _do_drag_scroll(self, event):
+        """Perform drag scrolling based on mouse movement."""
+        self.gantt_canvas.scan_dragto(event.x, event.y, gain=1)
+
+    def _redraw_gantt_after_zoom(self):
+        """Redraws the Gantt chart elements after a zoom level change."""
+        if not self.gantt_cells:
+            return
+
+        # Calculate new dimensions
+        new_cell_width = int(self.gantt_cell_width * self.gantt_zoom_level)
+        new_row_height = int(self.gantt_row_height) # Keep height constant
+        process_col_width = 150
+
+        # Update column configurations
+        self.gantt_content.columnconfigure(0, minsize=process_col_width)
+        num_cols = len(self.gantt_content.grid_slaves(row=0))
+        for col in range(1, num_cols):
+            self.gantt_content.columnconfigure(col, minsize=new_cell_width)
+            # Update time labels
+            time_label = self.gantt_content.grid_slaves(row=0, column=col)[0]
+            time_label.configure(width=new_cell_width)
+
+        # Update process header label width
+        header_label = self.gantt_content.grid_slaves(row=0, column=0)[0]
+        header_label.configure(width=process_col_width)
+
+        # Update cell sizes and process labels
+        num_rows = len(self.gantt_cells)
+        for row in range(1, num_rows + 1):
+            # Update process label
+            process_label = self.gantt_content.grid_slaves(row=row, column=0)[0]
+            process_label.configure(width=process_col_width, height=new_row_height)
+
+            # Update time cells
+            if row in self.gantt_cells:
+                for col in range(1, num_cols):
+                    if col in self.gantt_cells[row]:
+                        cell_info = self.gantt_cells[row][col]
+                        cell_widget = cell_info['widget']
+                        cell_widget.configure(width=new_cell_width, height=new_row_height)
+                        # Re-apply color if process exists
+                        if cell_info['process']:
+                            process_color = self.process_colors.get(cell_info['process'].pid, PROCESS_BASE_COLOR)
+                            cell_widget.configure(fg_color=process_color)
+                        else:
+                            cell_widget.configure(fg_color=DARK_BG) # Reset empty cells
+
+        # Update the current time marker position and size if it exists
+        if self.current_time_marker:
+            marker_info = self.current_time_marker.grid_info()
+            if marker_info:
+                col = marker_info.get('column', 0)
+                # Recalculate horizontal position based on new cell width
+                # Place it in the correct column position, centered within the cell
+                x_offset = (new_cell_width - 3) // 2 # Center the 3px wide marker
+                self.current_time_marker.grid_configure(padx=(x_offset, 0))
+
+
+        # Crucially, update the scroll region after resizing everything
+        self.gantt_content.update_idletasks() # Wait for geometry updates
+        self.gantt_canvas.configure(scrollregion=self.gantt_canvas.bbox("all"))
+
+    def _zoom_in_gantt(self):
+        """Zoom in on the Gantt chart timeline."""
+        self.gantt_zoom_level = min(3.0, self.gantt_zoom_level * 1.2) # Limit max zoom
+        self._redraw_gantt_after_zoom()
+
+    def _zoom_out_gantt(self):
+        """Zoom out on the Gantt chart timeline."""
+        self.gantt_zoom_level = max(0.2, self.gantt_zoom_level / 1.2) # Limit min zoom
+        self._redraw_gantt_after_zoom()
+
+    def _reset_zoom_gantt(self):
+        """Reset the Gantt chart zoom level to default."""
+        self.gantt_zoom_level = 1.0
+        self._redraw_gantt_after_zoom()
+
+    # --- End Gantt Chart Scrolling and Zooming Methods ---
+
     def _setup_process_table(self, parent):
         """Set up the process table with dark theme styling."""
         table_frame = ctk.CTkFrame(parent)
@@ -308,7 +712,7 @@ class SimulationScreen(ctk.CTkFrame):
                         relief="flat")
         # Configure selected item colors
         style.map('Treeview',
-                  background=[('selected', '#0078D7')], # Use a highlight color
+                  background=[('selected', DARK_HIGHLIGHT)], # Use a highlight color
                   foreground=[('selected', 'white')])
         # Remove borders from headings
         style.layout("Treeview.Heading", [('Treeview.heading', {'sticky': 'nswe'})])
@@ -468,6 +872,20 @@ class SimulationScreen(ctk.CTkFrame):
         self.export_button = ctk.CTkButton(parent_tab, text="Export Results", command=self._on_export_results, state="disabled")
         self.export_button.grid(row=0, column=0, sticky="ew", padx=10, pady=10)
 
+    def _generate_process_colors(self, processes):
+        """Generate distinct colors for each process."""
+        # Initialize colors for processes
+        for process in processes:
+            if process.pid not in self.process_colors:
+                # Generate color based on PID using HSV to ensure good contrast
+                hue = (process.pid * 0.618033988749895) % 1.0  # Golden ratio
+                saturation = 0.8
+                value = 0.95
+                rgb = colorsys.hsv_to_rgb(hue, saturation, value)
+                # Convert to hex
+                hex_color = f"#{int(rgb[0]*255):02x}{int(rgb[1]*255):02x}{int(rgb[2]*255):02x}"
+                self.process_colors[process.pid] = hex_color
+
     def set_scheduler(self, scheduler):
         """
         Set the scheduler to use for simulation.
@@ -488,25 +906,47 @@ class SimulationScreen(ctk.CTkFrame):
         self.simulation.set_gantt_update_callback(self._update_gantt_chart)
         self.simulation.set_stats_update_callback(self._update_stats)
 
-        # Update the process table initially
-        self._update_process_table(scheduler.processes, 0)
-
         # Generate colors for processes
         self._generate_process_colors(scheduler.processes)
+        
+        # Update the process table initially
+        self._update_process_table(scheduler.processes, 0)
+        
+        # Initialize the Gantt chart with process names
+        self._setup_initial_gantt_processes(scheduler.processes)
 
         # Enable/disable controls
         self._update_controls()
 
-    def _generate_process_colors(self, processes):
-        """Generate distinct colors for each process for the Gantt chart."""
-        # Initialize colors for processes
-        for process in processes:
-            if process.pid not in self.process_colors:
-                # Generate a random pastel color
-                r = random.uniform(0.5, 0.9)
-                g = random.uniform(0.5, 0.9)
-                b = random.uniform(0.5, 0.9)
-                self.process_colors[process.pid] = (r, g, b)
+    def _setup_initial_gantt_processes(self, processes):
+        """Set up initial process rows in the Gantt chart."""
+        if not processes:
+            return
+            
+        # Sort processes by PID
+        processes_sorted = sorted(processes, key=lambda p: p.pid)
+        
+        # Ensure we have enough rows
+        self._expand_process_rows(len(processes_sorted))
+        
+        # Update process labels
+        for i, process in enumerate(processes_sorted):
+            row = i + 1
+            
+            # Update the process label
+            process_label = self.gantt_content.grid_slaves(row=row, column=0)[0]
+            process_label.configure(
+                text=f"{process.name} (PID: {process.pid})",
+                fg_color=self.process_colors.get(process.pid, DARK_BG),
+                text_color="black",
+                font=("Segoe UI", 10, "bold")
+            )
+        
+        # Initialize the timeline entries list
+        self.timeline_entries = []
+            
+        # Update the scroll region
+        self.gantt_canvas.configure(scrollregion=self.gantt_canvas.bbox("all"))
 
     def _update_process_table(self, processes, current_time):
         """Update the process table with current process information."""
@@ -517,8 +957,11 @@ class SimulationScreen(ctk.CTkFrame):
         # Add colors for any new processes
         self._generate_process_colors(processes)
 
+        # Sort processes by PID
+        processes_sorted = sorted(processes, key=lambda p: p.pid)
+
         # Update the table
-        for process in processes:
+        for process in processes_sorted:
             remaining = process.remaining_time
             waiting = process.waiting_time
             turnaround = process.turnaround_time
@@ -550,187 +993,185 @@ class SimulationScreen(ctk.CTkFrame):
             self.live_name_var.set(f"P{self.next_pid}")
 
     def _update_gantt_chart(self, current_process, current_time):
-        """Update the Gantt chart with dark theme styling."""
-        if not self.simulation:
+        """Update the timeline visualization with the current simulation state."""
+        if not self.simulation or not self.scheduler:
             return
 
-        # Clear existing chart
-        self.ax.clear()
-        self.gantt_bars = []
-
-        # Get all processes
-        processes = self.scheduler.processes
-        if not processes:
-            # If no processes, still draw the base chart correctly themed
-            self._init_gantt_chart()
-            return
-
-        # Sort processes by PID for consistent ordering (lower PIDs at top)
-        processes_sorted = sorted(processes, key=lambda p: p.pid)
-
-        # Get the current visible range for processes (vertical)
-        if not hasattr(self, 'y_view_range') or len(processes_sorted) <= (self.y_view_range[1] - self.y_view_range[0]):
-            # If we can display all processes, show them all
-            processes_to_display = processes_sorted
-            y_start = 0
-        else:
-            # Otherwise, display only the processes in the current view range
-            y_start = self.y_view_range[0]
-            y_end = min(self.y_view_range[1], len(processes_sorted))
-            processes_to_display = processes_sorted[y_start:y_end]
-
-        # Prepare data for Gantt chart - include PIDs in labels for better identification
-        process_names = [f"{p.name} (PID: {p.pid})" for p in processes_to_display]
-        y_pos = np.arange(len(process_names))
-
-        # Set up chart elements with dark theme colors
-        self.ax.set_title("CPU Scheduling Gantt Chart", color=DARK_FG)
-        self.ax.set_xlabel("Time", color=DARK_FG)
-        self.ax.set_ylabel("Processes", color=DARK_FG)
+        # Get all processes sorted by PID
+        processes = sorted(self.scheduler.processes, key=lambda p: p.pid)
         
-        # Set up fixed y-axis with process names
-        self.ax.set_yticks(y_pos)
-        self.ax.set_yticklabels(process_names, color=DARK_FG)
+        # Ensure we have enough rows and columns, considering zoom
+        self._expand_process_rows(len(processes))
+        # Expand time slightly beyond current time + buffer
+        required_time_units = int(current_time) + 15 
+        self._expand_gantt_chart(required_time_units)
         
-        # Center-align the y-axis labels
-        for label in self.ax.get_yticklabels():
-            label.set_horizontalalignment('center')
+        # Get timeline entries from simulation
+        new_entries = self.simulation.get_timeline_entries()
         
-        # Set background color
-        self.ax.set_facecolor(DARK_AXES)
-
-        # Configure colors for axes and ticks
-        self.ax.spines['bottom'].set_color(DARK_FG)
-        self.ax.spines['top'].set_color(DARK_FG)
-        self.ax.spines['left'].set_color(DARK_FG)
-        self.ax.spines['right'].set_color(DARK_FG)
-        self.ax.tick_params(axis='x', colors=DARK_FG)
-        self.ax.tick_params(axis='y', colors=DARK_FG)
+        # Calculate dynamic cell width based on zoom
+        time_cell_width = int(self.gantt_cell_width * self.gantt_zoom_level)
         
-        # Move x-axis to the top
-        self.ax.xaxis.set_ticks_position('top')
-        self.ax.xaxis.set_label_position('top')
-
-        # Find the maximum time for the timeline
-        max_time = current_time
-        if self.simulation.get_timeline_entries():
-             max_time = max(current_time, max(entry[2] for entry in self.simulation.get_timeline_entries()))
-        
-        # Update the tracked max time
-        self.current_max_time = max(self.current_max_time, max_time + 5)
-
-        # Get horizontal scroll position or use default
-        if not hasattr(self, 'x_view_range'):
-            self.x_view_range = [0, 20]
-        
-        # If current time is beyond the view, adjust the view
-        if current_time > self.x_view_range[1] - 5:
-            range_width = self.x_view_range[1] - self.x_view_range[0]
-            self.x_view_range[0] = max(0, current_time - 5)
-            self.x_view_range[1] = self.x_view_range[0] + range_width
+        # Update process labels if needed (ensure width is correct after zoom)
+        process_col_width = 150
+        for i, process in enumerate(processes):
+            row = i + 1
+            process_label = self.gantt_content.grid_slaves(row=row, column=0)[0]
+            process_color = self.process_colors.get(process.pid, PROCESS_BASE_COLOR)
+            process_label_text = f"{process.name}"
+            if len(process.name) < 10:
+                process_label_text += f" (PID: {process.pid})"
             
-        # Set x-axis limits to current view range
-        self.ax.set_xlim(self.x_view_range[0], self.x_view_range[1])
-        
-        # Force integer ticks for the x-axis using MultipleLocator
-        self.ax.xaxis.set_major_locator(matplotlib.ticker.MultipleLocator(1))
-        
-        # Add grid
-        self.ax.grid(True, which='both', axis='x', linestyle='--', linewidth=0.5, color=DARK_GRID)
-
-        # Draw execution blocks for each process
-        timeline_entries = self.simulation.get_timeline_entries()
-
-        # Create a mapping of processes to their sorted position for consistent y-axis positioning
-        position_in_view = {p: idx for idx, p in enumerate(processes_to_display)}
-        process_position = {processes_sorted.index(p) + y_start: idx for p, idx in position_in_view.items()}
-
-        # Draw each timeline entry
-        for entry in timeline_entries:
-            process, start_t, end_t = entry
-            try:
-                # Get the global process position
-                global_idx = processes_sorted.index(process)
-                
-                # Skip if the process is not in the current view
-                if global_idx < y_start or global_idx >= y_start + len(processes_to_display):
-                    continue
-                    
-                # Get the position within the displayed view
-                process_idx = position_in_view.get(process)
-                if process_idx is None:
-                    continue
-            except (ValueError, IndexError):
-                continue  # Skip if process not found
-
-            color = self.process_colors.get(process.pid, (0.5, 0.5, 0.5))
-
-            # Create a rectangle for this execution block
-            rect = patches.Rectangle(
-                (start_t, process_idx - 0.4),  # (x, y)
-                end_t - start_t,               # width
-                0.8,                           # height
-                linewidth=0.5,                 # border
-                edgecolor=DARK_FG,             # border color
-                facecolor=color,
-                alpha=0.9,
-                label=process.name
+            process_label.configure(
+                text=process_label_text,
+                fg_color=process_color,
+                text_color="#000000",
+                font=("Segoe UI", 10, "bold"),
+                corner_radius=4,
+                width=process_col_width # Ensure width is maintained
             )
-            self.ax.add_patch(rect)
+                
+        # Process timeline entries that are new since last update
+        if len(new_entries) > len(self.timeline_entries):
+            for entry in new_entries[len(self.timeline_entries):]:
+                process, start_t, end_t = entry
+                process_idx = next((i + 1 for i, p in enumerate(processes) if p.pid == process.pid), None)
+                if process_idx is None: continue
+                
+                process_color = self.process_colors.get(process.pid, PROCESS_BASE_COLOR)
+                
+                # Update cells for this execution block
+                # Ensure start_t and end_t are integers for range
+                start_col = int(start_t) + 1
+                end_col = int(end_t) + 1 # Range goes up to, but not including end_col
+                
+                for col in range(start_col, end_col):
+                    if process_idx not in self.gantt_cells or col not in self.gantt_cells[process_idx]:
+                        # This might happen if chart wasn't expanded enough initially
+                        # Try expanding again just in case
+                        self._expand_gantt_chart(col + 5)
+                        if col not in self.gantt_cells[process_idx]:
+                            print(f"Warning: Gantt cell not found for P{process.pid} at time {col-1}")
+                            continue # Skip if still not found
 
-            # Store rectangle for tooltip
-            self.gantt_bars.append((rect, process, start_t, end_t))
+                    cell_info = self.gantt_cells[process_idx][col]
+                    cell = cell_info['widget']
+                    
+                    # Update cell appearance
+                    cell.configure(
+                        fg_color=process_color,
+                        border_width=0,
+                        width=time_cell_width # Ensure width matches zoom
+                    )
+                    
+                    # Add process execution label (only once for the block)
+                    if col == start_col and (end_t - start_t) > (1.5 / self.gantt_zoom_level): # Show label if block is wide enough
+                        # Clear any existing labels first
+                        for widget in cell.winfo_children():
+                            widget.destroy()
+                        
+                        ctk.CTkLabel(
+                            cell,
+                            text=f"P{process.pid}",
+                            font=("Segoe UI", 9, "bold"),
+                            text_color="#000000",
+                            fg_color="transparent"
+                        ).place(relx=0.5, rely=0.5, anchor="center")
+                    elif not cell.winfo_children() and (end_t - start_t) <= (1.5 / self.gantt_zoom_level):
+                        # Clear labels if block becomes too small due to zoom
+                         for widget in cell.winfo_children():
+                            widget.destroy()
 
-        # Draw current time marker
-        self.ax.axvline(x=current_time, color='red', linestyle='-', linewidth=1.5)
-
-        # Ensure enough space between tick labels
-        self.figure.tight_layout()
-        
-        # Update scrollbar positions
-        if processes:
-            v_fraction = y_start / max(1, (len(processes_sorted) - len(processes_to_display)))
-            self.v_scrollbar.set(v_fraction, v_fraction + len(processes_to_display)/len(processes_sorted))
+                    # Update cell info for tooltip
+                    cell_info['process'] = process
+                    cell_info['start'] = start_t
+                    cell_info['end'] = end_t
             
-            h_fraction = self.x_view_range[0] / max(1, (self.current_max_time - (self.x_view_range[1] - self.x_view_range[0])))
-            self.h_scrollbar.set(h_fraction, h_fraction + (self.x_view_range[1] - self.x_view_range[0])/self.current_max_time)
+            self.timeline_entries = new_entries[:]
         
-        # Redraw the figure
-        self.canvas.draw()
+        # Update current time marker
+        if self.current_time_marker:
+            self.current_time_marker.destroy()
+            self.current_time_marker = None
+            
+        # Add new marker if within visible range (check against actual columns)
+        num_cols = len(self.gantt_content.grid_slaves(row=0))
+        col_time = int(current_time) + 1 # Column index corresponding to current time
+        
+        if col_time < num_cols:
+            self.current_time_marker = ctk.CTkFrame(
+                self.gantt_content, 
+                width=3,
+                fg_color=ACCENT_COLOR,
+                corner_radius=0
+            )
+            
+            # Calculate horizontal position based on zoom
+            x_offset = (time_cell_width - 3) // 2 # Center the 3px marker in the cell
+            
+            self.current_time_marker.grid(
+                row=0, column=col_time, 
+                rowspan=len(processes) + 1,
+                sticky="nsw", # Stick to top, left, bottom
+                padx=(x_offset, 0) # Apply offset for centering
+            )
+            self.current_time_marker.lift()
+            
+            # Auto-scroll to keep the time marker visible (optional, can be annoying)
+            # self._ensure_time_marker_visible(col_time) 
 
-    def _on_hover(self, event):
-        """Handle hover events on the Gantt chart to show tooltips."""
-        if not self.gantt_bars or event.xdata is None or event.ydata is None:
-            self.tooltip.place_forget()
-            return
+        # Update scroll region after all updates
+        self.gantt_content.update_idletasks()
+        self.gantt_canvas.configure(scrollregion=self.gantt_canvas.bbox("all"))
 
-        # Check if mouse is over any gantt bar
-        for rect, process, start, end in self.gantt_bars:
-            # Use contains which checks data coordinates
-            contains, _ = rect.contains(event)
-            if contains:
-                # Convert canvas coordinates to window coordinates
-                x, y = self.canvas_widget.winfo_pointerxy() # Get mouse position relative to screen
-                root_x = self.winfo_toplevel().winfo_rootx() # Get window top-left x
-                root_y = self.winfo_toplevel().winfo_rooty() # Get window top-left y
+    def _ensure_time_marker_visible(self, marker_col):
+        """Scrolls the canvas horizontally if the time marker is out of view."""
+        # Get current horizontal view fractions
+        xview = self.gantt_canvas.xview()
+        view_start_fraction = xview[0]
+        view_end_fraction = xview[1]
 
-                # Calculate tooltip position relative to the window
-                tooltip_x = x - root_x + 10
-                tooltip_y = y - root_y + 10
+        # Calculate total content width and marker position
+        process_col_width = 150
+        cell_width_px = int(self.gantt_cell_width * self.gantt_zoom_level)
+        total_cols = len(self.gantt_content.grid_slaves(row=0))
+        total_content_width = process_col_width + (total_cols - 1) * cell_width_px
+        
+        if total_content_width == 0: return # Avoid division by zero
 
-                # Create tooltip text
-                text = (f"Process: {process.name} (PID: {process.pid})\n"
-                        f"Time: {start:.2f} to {end:.2f}\n"
-                        f"Duration: {end - start:.2f}")
+        # Calculate the start and end x-coordinates of the marker column
+        marker_start_x = process_col_width + (marker_col - 1) * cell_width_px
+        marker_end_x = marker_start_x + cell_width_px
 
-                # Update and show tooltip
-                self.tooltip.configure(text=text)
-                # Place relative to the main SimulationScreen frame
-                self.tooltip.place(x=tooltip_x, y=tooltip_y)
-                return
+        # Calculate marker position as fractions of total width
+        marker_start_fraction = marker_start_x / total_content_width
+        marker_end_fraction = marker_end_x / total_content_width
 
-        # If not over any bar, hide tooltip
-        self.tooltip.place_forget()
+        # Check if marker is out of view
+        scroll_needed = False
+        new_fraction = view_start_fraction
+
+        if marker_end_fraction > view_end_fraction: # Marker is off the right edge
+            # Scroll right to bring the end of the marker into view
+            new_fraction = marker_end_fraction - (view_end_fraction - view_start_fraction)
+            scroll_needed = True
+        elif marker_start_fraction < view_start_fraction: # Marker is off the left edge
+            # Scroll left to bring the start of the marker into view
+            new_fraction = marker_start_fraction
+            scroll_needed = True
+
+        if scroll_needed:
+            # Add a small buffer so it's not exactly at the edge
+            buffer_fraction = (cell_width_px / total_content_width) * 1.5 
+            if marker_end_fraction > view_end_fraction:
+                 new_fraction += buffer_fraction # Add buffer when scrolling right
+            else:
+                 new_fraction -= buffer_fraction # Subtract buffer when scrolling left
+
+            new_fraction = max(0, min(1 - (view_end_fraction - view_start_fraction), new_fraction)) # Clamp fraction
+            
+            self.gantt_canvas.xview_moveto(new_fraction)
+
 
     def _update_controls(self):
         """Update the enabled/disabled state of controls based on simulation state."""
@@ -804,9 +1245,19 @@ class SimulationScreen(ctk.CTkFrame):
         # Reset simulation
         self.simulation.reset()
 
-        # Reset UI elements
-        self._init_gantt_chart()
+        # Clear the Gantt chart
+        self._init_gantt_chart(time_units=20)
+        
+        # Reset timeline entries
+        self.timeline_entries = []
+        
+        # Restore process names
+        self._setup_initial_gantt_processes(self.scheduler.processes)
+        
+        # Reset process table
         self._update_process_table(self.scheduler.processes, 0)
+        
+        # Reset stats
         self._update_stats(0, 0)
 
         self.pause_button.configure(text="Pause")
@@ -875,6 +1326,9 @@ class SimulationScreen(ctk.CTkFrame):
 
                     # Force an immediate update to the process table and Gantt chart
                     self._update_process_table(self.scheduler.processes, current_time)
+                    
+                    # Make sure the new process is visible in the Gantt chart
+                    self._setup_initial_gantt_processes(self.scheduler.processes)
                     self._update_gantt_chart(self.scheduler.current_process, current_time)
 
                     # Show success message
@@ -934,7 +1388,7 @@ class SimulationScreen(ctk.CTkFrame):
                     ])
 
                     # Write data for each process
-                    for process in self.scheduler.processes:
+                    for process in sorted(self.scheduler.processes, key=lambda p: p.pid):
                         writer.writerow([
                             process.pid,
                             process.name,
@@ -966,7 +1420,7 @@ class SimulationScreen(ctk.CTkFrame):
                     file.write(f"{'PID':<5} {'Name':<10} {'Arrival':<8} {'Burst':<6} {'Priority':<8} {'Completion':<10} {'Turnaround':<10} {'Waiting':<8} {'Response':<8}\n")
                     file.write("-" * 80 + "\n")
 
-                    for process in self.scheduler.processes:
+                    for process in sorted(self.scheduler.processes, key=lambda p: p.pid):
                         file.write(f"{process.pid:<5} {process.name:<10} {process.arrival_time:<8} {process.burst_time:<6} "
                                    f"{str(process.priority) if process.priority is not None else '-':<8} "
                                    f"{str(process.completion_time) if process.completion_time is not None else '-':<10} "
@@ -1039,3 +1493,51 @@ class SimulationScreen(ctk.CTkFrame):
             self.current_process_var.set(f"{current_process.name} (PID: {current_process.pid})")
         else:
             self.current_process_var.set("None (Idle)")
+
+    def _show_cell_tooltip(self, row, col, event):
+        """Display tooltip for a Gantt chart cell."""
+        if row not in self.gantt_cells or col not in self.gantt_cells[row]:
+            return
+
+        cell_info = self.gantt_cells[row][col]
+        process = cell_info.get('process')
+        start_time = cell_info.get('start')
+        end_time = cell_info.get('end')
+
+        tooltip_text = f"Time: {col-1}-{col}" # Time unit is col-1
+        if process:
+            tooltip_text += f"\nProcess: {process.name} (PID: {process.pid})"
+            tooltip_text += f"\nExecuting: {start_time}-{end_time}"
+        else:
+            # Find the process name associated with this row
+            process_label = self.gantt_content.grid_slaves(row=row, column=0)[0]
+            process_name_text = process_label.cget("text")
+            if process_name_text:
+                 tooltip_text += f"\nProcess Row: {process_name_text}"
+            tooltip_text += "\nStatus: Idle"
+
+
+        self.tooltip.configure(text=tooltip_text)
+        
+        # Position tooltip near the mouse pointer
+        # Adjust position slightly to avoid covering the cell itself
+        x = event.x_root + 10 
+        y = event.y_root + 10
+        
+        # Ensure tooltip stays within screen bounds (basic check)
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+        tooltip_width = self.tooltip.winfo_reqwidth()
+        tooltip_height = self.tooltip.winfo_reqheight()
+
+        if x + tooltip_width > screen_width:
+            x = screen_width - tooltip_width - 5
+        if y + tooltip_height > screen_height:
+            y = screen_height - tooltip_height - 5
+            
+        self.tooltip.place(x=x, y=y)
+        self.tooltip.lift() # Ensure tooltip is on top
+
+    def _hide_tooltip(self, event=None):
+        """Hide the tooltip."""
+        self.tooltip.place_forget()

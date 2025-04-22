@@ -98,7 +98,19 @@ class CPUSchedulerApp:
         Show the simulation screen with the configured scheduler.
         
         Args:
-            scheduler: The configured scheduler to use for simulation
+            scheduler: The configured scheduler to use for simulation3.11.7\Lib\tkinter_init.py", line 1943, in call
+            def call(self, *args):
+            
+            KeyboardInterrupt
+            
+            fix these
+            
+            GitHub Copilot
+            I'll fix the errors in the simulation_screen.py file. Looking at the traceback, there are issues with attempting to set the 'font' property on CTkFrame objects, which doesn't support this attribute. The main problem is in the _apply_gantt_zoom() method where the code is trying to configure frames with font attributes.
+            
+            Let me examine the code and make the necessary fixes:
+            
+            
         """
         # Create simulation screen if it doesn't exist
         if self.simulation_frame is None:
