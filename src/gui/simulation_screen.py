@@ -118,17 +118,26 @@ class SimulationScreen(ctk.CTkFrame):
         back_button.grid(row=0, column=1, sticky="e", padx=5)
 
     def _setup_gantt_chart(self, parent):
-        """Set up the Gantt chart visualization with dark theme."""
+        """Set up the Gantt chart visualization with dark theme and scrollbars."""
         gantt_frame = ctk.CTkFrame(parent)
         gantt_frame.grid(row=0, column=0, sticky="nsew", padx=0, pady=(0, 5))
         gantt_frame.columnconfigure(0, weight=1)
         gantt_frame.rowconfigure(0, weight=1)
+        
+        # Main frame to hold canvas and scrollbars
+        gantt_container = ctk.CTkFrame(gantt_frame)
+        gantt_container.grid(row=0, column=0, sticky="nsew")
+        gantt_container.grid_columnconfigure(0, weight=1)
+        gantt_container.grid_rowconfigure(0, weight=1)
 
         # Create a matplotlib figure for the Gantt chart with dark background
         self.figure = Figure(figsize=(5, 4), dpi=100, facecolor=DARK_BG)
-        self.ax = self.figure.add_subplot(111)
-        self.ax.set_facecolor(DARK_AXES) # Dark background for the plot area
-
+        
+        # Create a special layout with time axis at the top
+        gs = self.figure.add_gridspec(1, 1)
+        self.ax = self.figure.add_subplot(gs[0, 0])
+        self.ax.set_facecolor(DARK_AXES)
+        
         # Configure colors for axes and ticks
         self.ax.spines['bottom'].set_color(DARK_FG)
         self.ax.spines['top'].set_color(DARK_FG)
@@ -140,21 +149,102 @@ class SimulationScreen(ctk.CTkFrame):
         self.ax.tick_params(axis='y', colors=DARK_FG)
         self.ax.title.set_color(DARK_FG)
 
-        self.canvas = FigureCanvasTkAgg(self.figure, gantt_frame)
+        # Create canvas and scrollbars
+        self.canvas = FigureCanvasTkAgg(self.figure, gantt_container)
         self.canvas_widget = self.canvas.get_tk_widget()
-        # Set the canvas background to match the frame
-        self.canvas_widget.configure(bg=gantt_frame.cget("fg_color")[1]) # Use the dark mode color
+        self.canvas_widget.configure(bg=gantt_container.cget("fg_color")[1])
+        
+        # Add horizontal scrollbar
+        self.h_scrollbar = ctk.CTkScrollbar(gantt_container, orientation="horizontal", command=self._on_h_scroll)
+        
+        # Add vertical scrollbar
+        self.v_scrollbar = ctk.CTkScrollbar(gantt_container, orientation="vertical", command=self._on_v_scroll)
+        
+        # Place canvas and scrollbars
         self.canvas_widget.grid(row=0, column=0, sticky="nsew")
-
+        self.h_scrollbar.grid(row=1, column=0, sticky="ew")
+        self.v_scrollbar.grid(row=0, column=1, sticky="ns")
+        
+        # Configure scrollable area
+        gantt_container.grid_rowconfigure(0, weight=1)
+        gantt_container.grid_columnconfigure(0, weight=1)
+        
         # Set up initial Gantt chart
         self._init_gantt_chart()
 
-        # Add tooltip for hover information (using a CTkLabel for better theme integration)
+        # Add tooltip for hover information
         self.tooltip = ctk.CTkLabel(self, text="", corner_radius=5, fg_color=DARK_TOOLTIP_BG, text_color=DARK_TOOLTIP_FG)
 
-        # Bind mouse motion for tooltips
+        # Initial visible ranges for x and y axes
+        self.x_view_range = [0, 20]  # [start, end] for x-axis view
+        self.y_view_range = [0, 10]  # [start, end] for y-axis view
+        self.current_max_time = 20   # Keep track of maximum time
+
+        # Bind mouse events for interactions
         self.canvas.mpl_connect("motion_notify_event", self._on_hover)
         self.canvas.mpl_connect("axes_leave_event", lambda event: self.tooltip.place_forget())
+        
+    def _on_h_scroll(self, *args):
+        """Handle horizontal scrolling of the Gantt chart."""
+        if not hasattr(self, 'x_view_range') or not self.simulation:
+            return
+
+        # Get the scroll movement
+        if len(args) > 1:
+            scroll_type = args[0]
+            amount = args[1]
+            
+            range_width = self.x_view_range[1] - self.x_view_range[0]
+            
+            # Calculate movement based on scroll action
+            if scroll_type == "moveto":
+                # Convert from fraction (0-1) to time units
+                new_start = float(amount) * (self.current_max_time - range_width)
+                self.x_view_range[0] = max(0, int(new_start))
+                self.x_view_range[1] = self.x_view_range[0] + range_width
+            elif scroll_type == "scroll":
+                # Amount is in scroll units, convert to time units
+                movement = int(float(amount) * 3)  # Adjust the scrolling speed
+                self.x_view_range[0] = max(0, self.x_view_range[0] + movement)
+                self.x_view_range[1] = self.x_view_range[0] + range_width
+                
+                # Don't go beyond the max time 
+                if self.x_view_range[1] > self.current_max_time + 5:
+                    self.x_view_range[1] = self.current_max_time + 5
+                    self.x_view_range[0] = max(0, self.x_view_range[1] - range_width)
+            
+            # Update the axis and redraw
+            self.ax.set_xlim(self.x_view_range[0], self.x_view_range[1])
+            self.canvas.draw()
+            
+    def _on_v_scroll(self, *args):
+        """Handle vertical scrolling of the Gantt chart."""
+        if not hasattr(self, 'y_view_range') or not self.simulation or not self.scheduler.processes:
+            return
+            
+        processes_count = len(self.scheduler.processes)
+        
+        # Get the scroll movement
+        if len(args) > 1:
+            scroll_type = args[0]
+            amount = args[1]
+            
+            visible_processes = self.y_view_range[1] - self.y_view_range[0]
+            
+            # Calculate movement based on scroll action
+            if scroll_type == "moveto":
+                # Convert from fraction (0-1) to process indices
+                new_top = float(amount) * (processes_count - visible_processes)
+                self.y_view_range[0] = max(0, int(new_top))
+                self.y_view_range[1] = min(processes_count, self.y_view_range[0] + visible_processes)
+            elif scroll_type == "scroll":
+                # Amount is in scroll units, convert to process indices
+                movement = int(float(amount))  # Keep 1:1 movement
+                self.y_view_range[0] = max(0, self.y_view_range[0] + movement)
+                self.y_view_range[1] = min(processes_count, self.y_view_range[0] + visible_processes)
+            
+            # Update the axis and redraw
+            self._update_gantt_chart(self.scheduler.current_process, self.scheduler.current_time)
 
     def _init_gantt_chart(self):
         """Initialize the Gantt chart with dark theme styling."""
@@ -162,8 +252,11 @@ class SimulationScreen(ctk.CTkFrame):
         self.ax.set_title("CPU Scheduling Gantt Chart", color=DARK_FG)
         self.ax.set_xlabel("Time", color=DARK_FG)
         self.ax.set_ylabel("Processes", color=DARK_FG)
-        self.ax.set_xlim(0, 10)  # Initial time window
-
+        self.ax.set_xlim(0, 20)  # Initial time window
+        
+        # Fixed integer ticks for the x-axis
+        self.ax.xaxis.set_major_locator(matplotlib.ticker.MultipleLocator(1))
+        
         # Set grid color
         self.ax.grid(True, which='both', axis='x', linestyle='--', linewidth=0.5, color=DARK_GRID)
 
@@ -176,12 +269,16 @@ class SimulationScreen(ctk.CTkFrame):
         self.ax.tick_params(axis='x', colors=DARK_FG)
         self.ax.tick_params(axis='y', colors=DARK_FG)
 
+        # Move x-axis to the top
+        self.ax.xaxis.set_ticks_position('top')
+        self.ax.xaxis.set_label_position('top')
+
         self.figure.tight_layout()
         self.canvas.draw()
 
         # Store gantt data for tooltips
         self.gantt_bars = []
-
+        
     def _setup_process_table(self, parent):
         """Set up the process table with dark theme styling."""
         table_frame = ctk.CTkFrame(parent)
@@ -468,16 +565,38 @@ class SimulationScreen(ctk.CTkFrame):
             self._init_gantt_chart()
             return
 
-        # Prepare data for Gantt chart
-        process_names = [p.name for p in processes]
+        # Sort processes by PID for consistent ordering (lower PIDs at top)
+        processes_sorted = sorted(processes, key=lambda p: p.pid)
+
+        # Get the current visible range for processes (vertical)
+        if not hasattr(self, 'y_view_range') or len(processes_sorted) <= (self.y_view_range[1] - self.y_view_range[0]):
+            # If we can display all processes, show them all
+            processes_to_display = processes_sorted
+            y_start = 0
+        else:
+            # Otherwise, display only the processes in the current view range
+            y_start = self.y_view_range[0]
+            y_end = min(self.y_view_range[1], len(processes_sorted))
+            processes_to_display = processes_sorted[y_start:y_end]
+
+        # Prepare data for Gantt chart - include PIDs in labels for better identification
+        process_names = [f"{p.name} (PID: {p.pid})" for p in processes_to_display]
         y_pos = np.arange(len(process_names))
 
         # Set up chart elements with dark theme colors
         self.ax.set_title("CPU Scheduling Gantt Chart", color=DARK_FG)
         self.ax.set_xlabel("Time", color=DARK_FG)
         self.ax.set_ylabel("Processes", color=DARK_FG)
+        
+        # Set up fixed y-axis with process names
         self.ax.set_yticks(y_pos)
-        self.ax.set_yticklabels(process_names, color=DARK_FG) # Set tick label color
+        self.ax.set_yticklabels(process_names, color=DARK_FG)
+        
+        # Center-align the y-axis labels
+        for label in self.ax.get_yticklabels():
+            label.set_horizontalalignment('center')
+        
+        # Set background color
         self.ax.set_facecolor(DARK_AXES)
 
         # Configure colors for axes and ticks
@@ -487,51 +606,74 @@ class SimulationScreen(ctk.CTkFrame):
         self.ax.spines['right'].set_color(DARK_FG)
         self.ax.tick_params(axis='x', colors=DARK_FG)
         self.ax.tick_params(axis='y', colors=DARK_FG)
+        
+        # Move x-axis to the top
+        self.ax.xaxis.set_ticks_position('top')
+        self.ax.xaxis.set_label_position('top')
 
-        # Dynamically adjust time window based on current time
+        # Find the maximum time for the timeline
         max_time = current_time
         if self.simulation.get_timeline_entries():
              max_time = max(current_time, max(entry[2] for entry in self.simulation.get_timeline_entries()))
+        
+        # Update the tracked max time
+        self.current_max_time = max(self.current_max_time, max_time + 5)
 
-        window_size = 20  # Show 20 time units at a time
-        # Adjust window logic slightly to handle max_time
-        if max_time <= window_size:
-            start_time = 0
-            end_time = window_size
-        else:
-            start_time = max(0, current_time - window_size * 0.75) # Show more past than future
-            end_time = start_time + window_size
-            if end_time < max_time:
-                 end_time = max_time + 2 # Add a little buffer
-                 start_time = end_time - window_size
-
-        self.ax.set_xlim(start_time, end_time)
-
+        # Get horizontal scroll position or use default
+        if not hasattr(self, 'x_view_range'):
+            self.x_view_range = [0, 20]
+        
+        # If current time is beyond the view, adjust the view
+        if current_time > self.x_view_range[1] - 5:
+            range_width = self.x_view_range[1] - self.x_view_range[0]
+            self.x_view_range[0] = max(0, current_time - 5)
+            self.x_view_range[1] = self.x_view_range[0] + range_width
+            
+        # Set x-axis limits to current view range
+        self.ax.set_xlim(self.x_view_range[0], self.x_view_range[1])
+        
+        # Force integer ticks for the x-axis using MultipleLocator
+        self.ax.xaxis.set_major_locator(matplotlib.ticker.MultipleLocator(1))
+        
         # Add grid
         self.ax.grid(True, which='both', axis='x', linestyle='--', linewidth=0.5, color=DARK_GRID)
 
         # Draw execution blocks for each process
         timeline_entries = self.simulation.get_timeline_entries()
 
+        # Create a mapping of processes to their sorted position for consistent y-axis positioning
+        position_in_view = {p: idx for idx, p in enumerate(processes_to_display)}
+        process_position = {processes_sorted.index(p) + y_start: idx for p, idx in position_in_view.items()}
+
         # Draw each timeline entry
         for entry in timeline_entries:
             process, start_t, end_t = entry
             try:
-                process_idx = processes.index(process)
-            except ValueError:
-                continue # Skip if process not found (e.g., added and removed quickly?)
+                # Get the global process position
+                global_idx = processes_sorted.index(process)
+                
+                # Skip if the process is not in the current view
+                if global_idx < y_start or global_idx >= y_start + len(processes_to_display):
+                    continue
+                    
+                # Get the position within the displayed view
+                process_idx = position_in_view.get(process)
+                if process_idx is None:
+                    continue
+            except (ValueError, IndexError):
+                continue  # Skip if process not found
 
-            color = self.process_colors.get(process.pid, (0.5, 0.5, 0.5)) # Default color if not found
+            color = self.process_colors.get(process.pid, (0.5, 0.5, 0.5))
 
             # Create a rectangle for this execution block
             rect = patches.Rectangle(
                 (start_t, process_idx - 0.4),  # (x, y)
-                end_t - start_t,              # width
-                0.8,                               # height
-                linewidth=0.5, # Thinner border
-                edgecolor=DARK_FG, # Light border for visibility
+                end_t - start_t,               # width
+                0.8,                           # height
+                linewidth=0.5,                 # border
+                edgecolor=DARK_FG,             # border color
                 facecolor=color,
-                alpha=0.9, # Slightly more opaque
+                alpha=0.9,
                 label=process.name
             )
             self.ax.add_patch(rect)
@@ -542,35 +684,19 @@ class SimulationScreen(ctk.CTkFrame):
         # Draw current time marker
         self.ax.axvline(x=current_time, color='red', linestyle='-', linewidth=1.5)
 
-        # Adjust layout and redraw
+        # Ensure enough space between tick labels
         self.figure.tight_layout()
+        
+        # Update scrollbar positions
+        if processes:
+            v_fraction = y_start / max(1, (len(processes_sorted) - len(processes_to_display)))
+            self.v_scrollbar.set(v_fraction, v_fraction + len(processes_to_display)/len(processes_sorted))
+            
+            h_fraction = self.x_view_range[0] / max(1, (self.current_max_time - (self.x_view_range[1] - self.x_view_range[0])))
+            self.h_scrollbar.set(h_fraction, h_fraction + (self.x_view_range[1] - self.x_view_range[0])/self.current_max_time)
+        
+        # Redraw the figure
         self.canvas.draw()
-
-    def _update_stats(self, avg_waiting, avg_turnaround):
-        """Update the statistics panel with current metrics."""
-        if not self.simulation or not self.scheduler:
-            return
-
-        # Update average metrics
-        self.avg_waiting_var.set(f"{avg_waiting:.2f}")
-        self.avg_turnaround_var.set(f"{avg_turnaround:.2f}")
-
-        # Get additional metrics
-        avg_response = self.scheduler.get_average_response_time()
-        cpu_util = self.simulation.get_cpu_utilization() * 100
-        throughput = self.simulation.get_throughput()
-
-        # Update UI
-        self.avg_response_var.set(f"{avg_response:.2f}")
-        self.cpu_util_var.set(f"{cpu_util:.2f}%")
-        self.throughput_var.set(f"{throughput:.2f} proc/unit")
-
-        # Update current process
-        current_process = self.scheduler.current_process
-        if current_process:
-            self.current_process_var.set(f"{current_process.name} (PID: {current_process.pid})")
-        else:
-            self.current_process_var.set("None (Idle)")
 
     def _on_hover(self, event):
         """Handle hover events on the Gantt chart to show tooltips."""
@@ -887,3 +1013,29 @@ class SimulationScreen(ctk.CTkFrame):
             print(f"Error in simulation thread: {str(e)}")
             messagebox.showerror("Simulation Error", f"An error occurred: {str(e)}")
             self.simulation.stop()
+
+    def _update_stats(self, avg_waiting, avg_turnaround):
+        """Update the statistics panel with current metrics."""
+        if not self.simulation or not self.scheduler:
+            return
+
+        # Update average metrics
+        self.avg_waiting_var.set(f"{avg_waiting:.2f}")
+        self.avg_turnaround_var.set(f"{avg_turnaround:.2f}")
+
+        # Get additional metrics
+        avg_response = self.scheduler.get_average_response_time()
+        cpu_util = self.simulation.get_cpu_utilization() * 100
+        throughput = self.simulation.get_throughput()
+
+        # Update UI
+        self.avg_response_var.set(f"{avg_response:.2f}")
+        self.cpu_util_var.set(f"{cpu_util:.2f}%")
+        self.throughput_var.set(f"{throughput:.2f} proc/unit")
+
+        # Update current process
+        current_process = self.scheduler.current_process
+        if current_process:
+            self.current_process_var.set(f"{current_process.name} (PID: {current_process.pid})")
+        else:
+            self.current_process_var.set("None (Idle)")

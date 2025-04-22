@@ -66,35 +66,12 @@ class CPUSchedulerApp:
     def set_app_icon(self):
         """Set the application icon using the SVG logo."""
         try:
-            # Try to use logo.svg if supported
-            logo_path = os.path.join(os.path.dirname(__file__), "docs", "logo.svg")
-            
-            if not os.path.exists(logo_path):
-                # Fallback to icon.ico if SVG doesn't exist
-                icon_path = os.path.join(os.path.dirname(__file__), "docs", "icon.ico")
-                if os.path.exists(icon_path):
-                    self.master.iconbitmap(icon_path)
-                return
-                
-            # Try converting SVG to a format Tkinter can use
-            try:
-                from cairosvg import svg2png
-                import io
-                
-                # Convert SVG to PNG in memory
-                png_data = io.BytesIO()
-                svg2png(url=logo_path, write_to=png_data)
-                png_data.seek(0)
-                
-                # Create PhotoImage from PNG data
-                img = Image.open(png_data)
-                photo = ImageTk.PhotoImage(img)
-                self.master.iconphoto(True, photo)
-            except ImportError:
-                # Fallback to icon.ico if SVG handling isn't available
-                icon_path = os.path.join(os.path.dirname(__file__), "docs", "icon.ico")
-                if os.path.exists(icon_path):
-                    self.master.iconbitmap(icon_path)
+            # Directly use the icon.ico file instead of SVG conversion
+            icon_path = os.path.join(os.path.dirname(__file__), "docs", "icon.ico")
+            if os.path.exists(icon_path):
+                self.master.iconbitmap(icon_path)
+            else:
+                print(f"Warning: Icon file not found at {icon_path}")
         except Exception as e:
             print(f"Error setting application icon: {e}")
     
