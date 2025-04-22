@@ -119,6 +119,9 @@ class Process:
     def get_execution_history(self) -> list[Execution]:
         return self.__execution_history
 
+    def get_priority(self) -> Optional[int]:
+        return self.__priority
+
     def __str__(self):
         """String representation of the process."""
         status = (

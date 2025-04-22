@@ -42,7 +42,8 @@ class PriorityNonPreemptiveScheduler(Scheduler):
         # If there are processes with the same priority, we sort by arrival time
         # If arrival times are also the same, we sort by PID
         self.current_running_process = sorted(
-            ready_processes, key=lambda p: (p.priority, p.arrival_time, p.pid)
+            ready_processes,
+            key=lambda p: (p.get_priority(), p.get_arrival_time(), p.get_pid()),
         )[0]
 
         return self.current_running_process
