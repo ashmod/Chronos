@@ -29,6 +29,15 @@ class Scheduler(ABC):
             process (Process): The process to add
         """
         self.processes.append(process)
+
+    def remove_process(self, pid: int):
+        """
+        Remove a process from the scheduler by its PID.
+        
+        Args:
+            pid (int): Process ID of the process to remove
+        """
+        self.processes.remove(next((p for p in self.processes if p.pid == pid), None))
         
     def reset(self):
         """Reset the scheduler state for a new simulation."""

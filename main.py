@@ -1,51 +1,55 @@
-#!/usr/bin/env python3
 import sys
-import time
-from PyQt5.QtWidgets import QApplication
-from PyQt5.QtCore import Qt
+from PyQt6.QtWidgets import QApplication, QMainWindow
+from src.GUI.process_input_scene import ProcessInputScene
+from src.GUI.run_live_scene import RunLiveScene
+from src.GUI.run_at_once_scene import RunAtOnceScene
 
-# Set high DPI attributes before creating QApplication
-if hasattr(Qt, 'AA_EnableHighDpiScaling'):
-    Qt.AA_EnableHighDpiScaling = True
-    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
-if hasattr(Qt, 'AA_UseHighDpiPixmaps'):
-    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
-
-from src.gui.main_window import MainWindow
-from src.gui.splash_screen import SplashScreen
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("CHRONOS")
+        self.resize(800, 600)
+        
+        # Create instances of all scenes
+        self.process_input_scene = ProcessInputScene()
+        self.run_live_scene = RunLiveScene()
+        self.run_at_once_scene = RunAtOnceScene()
+        
+        # Set the initial scene as the process input scene
+        self.setCentralWidget(self.process_input_scene)
+        
+        # Uncomment these lines to test different scenes:
+        # --- Test Run Live Scene ---
+        self.setCentralWidget(self.run_live_scene)
+        
+        # --- Test Run At Once Scene ---
+        self.setCentralWidget(self.run_at_once_scene)
+        
+        # Example of how to switch scenes programmatically:
+        # def switch_to_live_scene(self):
+        #     self.setCentralWidget(self.run_live_scene)
+        #
+        # def switch_to_at_once_scene(self):
+        #     self.setCentralWidget(self.run_at_once_scene)
+        #
+        # def back_to_process_input(self):
+        #     self.setCentralWidget(self.process_input_scene)
 
 def main():
-    """Main entry point for the ProcessPilot CPU Scheduler application."""
+    """Main entry point for the CHRONOS CPU Scheduler application."""
     # Initialize application
     app = QApplication(sys.argv)
     
     # Set application name and metadata
-    app.setApplicationName("ProcessPilot")
-    app.setApplicationDisplayName("ProcessPilot")
-    app.setOrganizationName("ASU Operating Systems Team")
-    app.setOrganizationDomain("asu.edu")
-    
-    # Show splash screen (dark mode by default)
-    splash = SplashScreen(app_name="ProcessPilot", dark_mode=True)
-    splash.show()
-    
-    # Process events to ensure splash screen is displayed
-    app.processEvents()
-    
-    # Load main window (simulate loading time)
-    def finish_loading():
-        # Create and show main window
-        window = MainWindow()
-        window.show()
-        
-        # Hide splash screen when main window is ready
-        splash.finish(window)
-    
-    # Connect splash screen finished signal to lambda that shows main window
-    splash.finished.connect(finish_loading)
-    
+    app.setApplicationName("CHRONOS")
+    app.setApplicationDisplayName("CHRONOS")
+
+    # Create and show main window
+    window = MainWindow()
+    window.show()
+
     # Start application event loop
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 if __name__ == "__main__":
     main()
