@@ -30,4 +30,6 @@ class FCFSScheduler(Scheduler):
 
         # In FCFS, we sort by arrival time (earliest first)
         # If there are processes with the same arrival time, we sort by PID
-        return sorted(ready_processes, key=lambda p: (p.arrival_time, p.pid))[0]
+        return sorted(
+            ready_processes, key=lambda p: (p.get_arrival_time(), p.get_pid())
+        )[0]
