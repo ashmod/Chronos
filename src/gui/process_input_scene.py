@@ -40,6 +40,7 @@ class ProcessInputScene(QWidget):
         self.runLiveSimulationButton.clicked.connect(self.goto_run_live_simulation)
         self.runAtOnceButton.clicked.connect(self.goto_run_at_once)
         self.algorithmComboBox.currentIndexChanged.connect(self.on_algorithm_changed)
+        self.importButton.clicked.connect(self.import_processes)
         
         # Set up initial state (read algorithm from combo box right away)
         self.on_algorithm_changed()
@@ -64,6 +65,51 @@ class ProcessInputScene(QWidget):
     def on_algorithm_changed(self):
         self.update_time_quantum_visibility()
         self.update_priority_visibility()
+
+    def import_processes(self) -> None:
+        """ Import processes from a csv file and add them to the table. """
+        from PyQt6.QtWidgets import QFileDialog, QMessageBox
+        import csv
+
+        file_dialog = QFileDialog(self)
+        file_path, _ = file_dialog.getOpenFileName(self, "Open CSV File", "", "CSV Files (*.csv);;All Files (*)")
+        print(file_path)
+        if not file_path:
+            print("No file selected.")
+            QMessageBox.warning(self, "Warning", "No file selected.")
+            return  # User canceled the dialog
+
+        try:
+            print("Importing processes from file...")
+            with open(file_path, mode='r', newline='') as file:
+                csv_reader = csv.reader(file)
+                header = next(csv_reader, None)  # Skip the header row if present
+                print(header)
+                for row in csv_reader:
+
+                    print(row)
+                    name = row[0].strip()
+                    arrival_time = int(row[1])
+                    burst_time = int(row[2])
+                    priority = int(row[3]) if len(row) > 3 else 0  # Default priority to 0 if not provided
+                    
+                    # Update table
+                    row_index = self.processTableWidget.rowCount()
+                    self.processTableWidget.insertRow(row_index)
+                    self.processTableWidget.setItem(row_index, 0, QTableWidgetItem(str(self.next_pid)))
+                    self.processTableWidget.setItem(row_index, 1, QTableWidgetItem(name))
+                    self.processTableWidget.setItem(row_index, 2, QTableWidgetItem(str(arrival_time)))
+                    self.processTableWidget.setItem(row_index, 3, QTableWidgetItem(str(burst_time)))
+                    self.processTableWidget.setItem(row_index, 4, QTableWidgetItem(str(priority)))
+                    
+                    # Increment PID counter
+                    self.next_pid += 1
+
+            # Update process name text box with next default name
+            self.processNameTextBox.setText(f"Process {self.next_pid}")
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to import processes: {str(e)}")
 
     def add_process(self):
         # Get values from input fields

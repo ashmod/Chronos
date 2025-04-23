@@ -215,6 +215,13 @@
      </property>
     </widget>
    </item>
+   <item row="10" column="0">
+    <widget class="QPushButton" name="importButton">
+     <property name="text">
+      <string>Import Processes</string>
+     </property>
+    </widget>
+   </item>
   </layout>
  </widget>
  <resources/>

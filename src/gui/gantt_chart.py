@@ -1,98 +1,62 @@
-from PyQt5.QtWidgets import (QWidget, QScrollArea, QHBoxLayout, 
-                           QVBoxLayout, QSizePolicy)
-from PyQt5.QtCore import Qt, QSize
-from PyQt5.QtGui import QPainter, QPen, QColor
+# import matplotlib
+# matplotlib.use('Qt5Agg')
+# from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
+# from matplotlib.figure import Figure
+# import numpy as np
+# import matplotlib.pyplot as plt
 
-class GanttChart(QWidget):
-    def __init__(self):
-        super().__init__()
-        self.timeline = []
-        self.setMinimumHeight(80)
+# class GanttCanvas(FigureCanvasQTAgg):
+#     def __init__(self, parent=None, width=5, height=4, dpi=100):
+#         fig = Figure(figsize=(width, height), dpi=dpi)
+#         self.axes = fig.add_subplot(111)
+#         super().__init__(fig)
         
-        # Create scroll area
-        self.scroll_area = QScrollArea()
-        self.scroll_area.setWidgetResizable(True)
-        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+#     def plot_gantt(self, processes_timeline):
+#         """
+#         Plot the Gantt chart with process execution timeline
+#         Args:
+#             processes_timeline: List of tuples (time, process_id, process_name)
+#         """
+#         self.axes.clear()
         
-        # Create inner widget for drawing
-        self.inner_widget = GanttInnerWidget()
-        self.inner_widget.setMinimumHeight(80)
-        self.scroll_area.setWidget(self.inner_widget)
+#         if not processes_timeline:
+#             return
+            
+#         # Extract unique process IDs and create a color map
+#         unique_processes = list(set(p[1] for p in processes_timeline))
+#         colors = plt.cm.get_cmap('tab20')(np.linspace(0, 1, len(unique_processes)))
+#         color_map = dict(zip(unique_processes, colors))
         
-        # Set up layout
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(self.scroll_area)
+#         # Create bars for each process execution
+#         for i in range(len(processes_timeline) - 1):
+#             process_id = processes_timeline[i][1]
+#             start_time = processes_timeline[i][0]
+#             end_time = processes_timeline[i + 1][0]
+            
+#             if process_id != -1:  # -1 indicates idle time
+#                 self.axes.barh(y=0, width=end_time - start_time, 
+#                              left=start_time, color=color_map[process_id],
+#                              label=f'P{process_id}')
+                
+#                 # Add process ID text in the middle of each bar
+#                 self.axes.text(start_time + (end_time - start_time)/2, 0,
+#                              f'P{process_id}', ha='center', va='center')
         
-        # Set size policy
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-    
-    def update_timeline(self, timeline):
-        """Update with [(pid, start_time, end_time), ...]"""
-        self.timeline = timeline
-        if timeline:
-            # Calculate total width needed (1 pixel per time unit)
-            total_time = max(end for _, _, end in timeline)
-            # Add some padding for better visualization
-            self.inner_widget.setMinimumWidth(total_time + 50)
-            self.inner_widget.update_timeline(timeline)
-        else:
-            self.inner_widget.update_timeline([])
-    
-    def paintEvent(self, event):
-        # This is now handled by the inner widget
-        pass
+#         # Customize the chart
+#         self.axes.set_yticks([])
+#         self.axes.set_xlabel('Time')
+#         self.axes.set_title('Process Execution Timeline')
+        
+#         # Add legend with unique processes
+#         handles = [plt.Rectangle((0,0),1,1, color=color_map[pid]) 
+#                   for pid in unique_processes]
+#         labels = [f'Process {pid}' for pid in unique_processes]
+#         self.axes.legend(handles, labels, loc='upper center', 
+#                         bbox_to_anchor=(0.5, -0.1), ncol=3)
+        
+#         # Adjust layout to prevent label cutoff
+#         self.figure.tight_layout()
+        
+#         # Refresh the canvas
+#         self.draw()
 
-class GanttInnerWidget(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.timeline = []
-        self.setMinimumHeight(80)
-        # Set size policy to allow horizontal expansion
-        self.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Fixed)
-    
-    def update_timeline(self, timeline):
-        self.timeline = timeline
-        self.update()
-    
-    def paintEvent(self, event):
-        if not self.timeline:
-            return
-        
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
-        
-        width = self.width()
-        height = self.height()
-        total_time = max(end for _, _, end in self.timeline)
-        
-        # Draw grid lines
-        painter.setPen(QPen(Qt.gray, 1, Qt.DotLine))
-        for time in range(0, total_time + 1, 5):
-            x = time
-            painter.drawLine(x, 0, x, height)
-        
-        # Draw timeline
-        for pid, start, end in self.timeline:
-            x1 = start
-            x2 = end
-            
-            # Draw process block
-            color = QColor(100 + (pid * 40) % 155, 100 + (pid * 70) % 155, 200)
-            painter.fillRect(x1, 0, x2 - x1, height, color)
-            
-            # Draw text
-            painter.setPen(Qt.white)
-            painter.drawText(int(x1), 0, int(x2 - x1), height, 
-                           Qt.AlignCenter, f"P{pid}")
-            
-            # Draw border
-            painter.setPen(Qt.black)
-            painter.drawRect(x1, 0, x2 - x1, height)
-            
-            # Draw time markers
-            painter.setPen(Qt.black)
-            painter.drawText(int(x1), height - 5, 30, 20, 
-                           Qt.AlignLeft, str(start))
-            painter.drawText(int(x2) - 30, height - 5, 30, 20, 
-                           Qt.AlignRight, str(end)) 

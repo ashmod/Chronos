@@ -49,7 +49,7 @@ class RunAtOnceScene(QWidget):
         
         # Connect return button signal
         self.returnToInputSceneButton.clicked.connect(self.return_to_input)
-    
+
     def return_to_input(self):
         from src.gui.process_input_scene import ProcessInputScene
         self.return_to_input_scene = ProcessInputScene()
@@ -67,7 +67,8 @@ class RunAtOnceScene(QWidget):
         
         # Loop on the generator object till the simulation is done 
         while not self.simulation.scheduler.all_processes_completed():
-            print("test world") 
+            print("test world")
+            print(self.simulation.scheduler.processes)
             try:
                 current_process = next(status)
                 self.processes_timeline.append(current_process)
