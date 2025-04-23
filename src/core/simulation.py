@@ -68,16 +68,19 @@ class Simulation:
         """
         Run the simulation with a delay between each tick.
         """
+        
+        print("Starting tick loop")
         while (self.running) and (not self.scheduler.all_processes_completed()):
-
+            print("Running Tick...")
             current_process = self.scheduler.run_tick()
 
             # Wait for the specified delay
             if useDelay:
                 time.sleep(self.delay)
             
+            print("Yielding current process")
             yield current_process
-                
+            print("After yield")
         self.running = False
         return self.running
 

@@ -41,7 +41,7 @@ class Process:
         self.__completion_time = None
         self.__waiting_time = 0
         self.__turnaround_time = 0
-        self.__response_time = None
+        self.__response_time = 0
         self.__execution_history = list()
 
     def is_completed(self):
@@ -73,7 +73,7 @@ class Process:
             self.__start_time = current_time
 
         # Track the first time this process runs (for response time)
-        if not self.__response_time:
+        if self.__response_time is None:
             self.__response_time = current_time - self.__arrival_time
 
         execution_time = min(self.__remaining_time, time_quantum)
@@ -118,6 +118,9 @@ class Process:
 
     def get_turnaround_time(self) -> int:
         return self.__turnaround_time
+    
+    def get_completion_time(self) -> Optional[int]:
+        return self.__completion_time
 
     def get_response_time(self) -> int:
         return self.__response_time
@@ -152,11 +155,8 @@ class Process:
         ]
 
         # Add metrics when available
-        if self.__waiting_time > 0:
-            output.append(f"  Waiting time: {self.__waiting_time}")
-        if self.__turnaround_time > 0:
-            output.append(f"  Turnaround time: {self.__turnaround_time}")
-        if self.__response_time is not None:
-            output.append(f"  Response time: {self.__response_time}")
+        output.append(f"  Waiting time: {self.__waiting_time}")
+        output.append(f"  Turnaround time: {self.__turnaround_time}")
+        output.append(f"  Response time: {self.__response_time}")
 
         return "\n".join(output)

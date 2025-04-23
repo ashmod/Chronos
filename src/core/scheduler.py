@@ -155,11 +155,12 @@ class Scheduler(ABC):
             Optional[Process]: The process that was executed in this tick, or None if idle
         """
         # Get the next process to execute
+        print("getting next process")
         next_process = self.get_next_process(self.current_time)
 
         # Define default value of time
         time_used = self.time_slice
-
+        print("inside tick")
         if next_process:
             # Execute the process for one time unit
             self.current_process = next_process
