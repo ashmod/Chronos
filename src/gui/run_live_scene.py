@@ -28,18 +28,16 @@ class RunLiveScene(QWidget):
         # Connect signals
         self.addLiveProcessButton.clicked.connect(self.add_live_process)
         self.runLiveButton.clicked.connect(self.run_live)
-        self.runAllButton.clicked.connect(self.run_all)
         self.pauseButton.clicked.connect(self.pause_simulation)  # Pause button
         self.returnToInputSceneButton.clicked.connect(self.return_to_input)    
         
     def add_live_process(self):
         """Add a live process to the simulation."""
-        threading.Thread(target=add_process_thread, daemon=True).start()
             
         def add_process_thread():
             
             # Get the input values from the UI
-            name = self.processNameInput.text()
+            name = self.processNameTextBox.text()
             burst_time = int(self.burstTimeSpinBox.value())
             priority = int(self.prioritySpinBox.value())
             pid = self.next_pid
@@ -57,16 +55,16 @@ class RunLiveScene(QWidget):
             self.next_pid += 1
             
             # Clear the input fieldsets = 
-            self.processNameInput.clear()
+            self.processNameTextBox.clear()
             self.burstTimeSpinBox.setValue(1)
             self.prioritySpinBox.setValue(0)
             
             # Turn off creating process flag
             self.creating_process = False
         
+        threading.Thread(target=add_process_thread, daemon=True).start()
 
     def run_live(self):
-        threading.Thread(target=run_live_thread, daemon=True).start()
         
         def run_live_thread():
             live_simulation = None
@@ -87,7 +85,11 @@ class RunLiveScene(QWidget):
                     
                 if self.simulation.scheduler.all_processes_completed():
                     # All processes are completed, stop the simulation
+                    print(*self.simulation.scheduler.get_processes())
                     break
+                
+        threading.Thread(target=run_live_thread, daemon=True).start()
+        
 
     def pause_simulation(self):
         """Pause the simulation."""
