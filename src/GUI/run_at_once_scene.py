@@ -59,6 +59,7 @@ class RunAtOnceScene(QWidget):
     def run_algorithm(self) -> None:
         """" Runs the simluation method till completion without interruptions."""
         
+        self.simulation.start()
         status: Generator = self.simulation._run_simulation(False)
         # Handle generator not created case
         if not status:

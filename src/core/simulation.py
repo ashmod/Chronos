@@ -48,9 +48,6 @@ class Simulation:
     def start(self):
         self.running = True
         self.paused = False
-        simulation_thread = threading.Thread(target=self._run_simulation)
-        simulation_thread.daemon = True
-        simulation_thread.start()
 
     def is_paused(self) -> bool:
         """Check if the simulation is paused."""
