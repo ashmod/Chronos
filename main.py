@@ -45,7 +45,7 @@ def main():
     app.setApplicationDisplayName("CHRONOS")
 
     # Create and show main window
-    window = MainWindow()
+    window = ProcessInputScene()
     window.show()
 
     # Start application event loop

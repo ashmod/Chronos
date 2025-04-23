@@ -26,6 +26,10 @@ class Scheduler(ABC):
         """Add a process to the scheduler"""
         self.processes.append(process)
 
+    def add_processes(self, processes: list[Process]) -> None:
+        """Add multiple processes to the scheduler"""
+        self.processes.extend(processes)
+
     def reset(self):
         """Reset only the scheduler state without resetting processes."""
         self.current_time = 0
@@ -139,7 +143,7 @@ class Scheduler(ABC):
         """
         pass
 
-    def run_tick(self) -> None:
+    def run_tick(self) -> Process:
         """
         Run a single tick of the scheduler.
 
@@ -158,11 +162,7 @@ class Scheduler(ABC):
             time_used = self.current_process.execute(self.current_time, self.time_slice)
 
             # If the process has completed, add it to completed processes
-            if (
-                self.current_process.is_completed()
-                and self.current_process
-                not in self.completed_processes  # TODO CHECK THIS
-            ):
+            if (self.current_process.is_completed()):
                 self.completed_processes.append(self.current_process)
         else:
             # CPU is idle
@@ -170,3 +170,5 @@ class Scheduler(ABC):
 
         # Advance the time
         self.current_time += time_used
+        
+        return self.current_process

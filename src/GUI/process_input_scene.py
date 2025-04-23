@@ -25,7 +25,7 @@ class ProcessInputScene(QWidget):
         # initial_scheduler = self._create_scheduler(self.algorithmComboBox.currentText())
         # self.simulation = Simulation(None)
         self.next_pid = 1  # Add PID counter
-        self.table_contents = []  # Store the processes in the table
+        # self.table_contents = {}  # Store the processes in the table
         # self.editing_row = -1  # Row currently being edited
         # self.currently_editing = False  # Flag to check if we are in editing mode
         # Initialize UI elements
@@ -75,16 +75,6 @@ class ProcessInputScene(QWidget):
         burst_time = self.burstTimeSpinBox.value()
         priority = self.prioritySpinBox.value()
         
-        # Create and add the process to simulation
-        process = Process(
-            pid=self.next_pid,
-            name=name,
-            arrival_time=arrival_time,
-            burst_time=burst_time,
-            priority=priority
-        )
-
-        self.table_contents.append(process)
         
         # Update table
         row = self.processTableWidget.rowCount()
@@ -118,6 +108,20 @@ class ProcessInputScene(QWidget):
         self.next_pid = 1
         self.processNameTextBox.setText(f"Process {self.next_pid}")
 
+    def get_processes_from_table(self):
+        processes = []
+        for row in range(self.processTableWidget.rowCount()):
+            pid = int(self.processTableWidget.item(row, 0).text())
+            name = self.processTableWidget.item(row, 1).text()
+            arrival_time = int(self.processTableWidget.item(row, 2).text())
+            burst_time = int(self.processTableWidget.item(row, 3).text())
+            priority = int(self.processTableWidget.item(row, 4).text())
+            
+            process = Process(pid, name, arrival_time, burst_time, priority)
+            processes.append(process)
+        
+        return processes
+    
     def _create_scheduler(self, algorithm_name: str) -> Scheduler:
         """Create appropriate scheduler based on algorithm name"""
         if "First-Come, First-Served" in algorithm_name:
@@ -136,10 +140,23 @@ class ProcessInputScene(QWidget):
         else:
             return FCFSScheduler()  # Default to FCFS
         
-    def goto_run_live_simulation(self):
-        # TODO: Implement live simulation launch
-        pass
-    
     def goto_run_at_once(self):
-        # TODO: Implement at-once simulation launch
-        pass
+        scheduler = self._create_scheduler(self.algorithmComboBox.currentText())
+        scheduler.add_processes(self.get_processes_from_table())
+        # print(*self.get_processes_from_table())
+        simulation = Simulation(scheduler)
+        from src.GUI.run_at_once_scene import RunAtOnceScene
+        self.run_at_once_scene = RunAtOnceScene(simulation)
+        self.run_at_once_scene.show()
+        self.close()  
+    
+    def goto_run_live_simulation(self):
+        scheduler = self._create_scheduler(self.algorithmComboBox.currentText())
+        scheduler.add_processes(self.get_processes_from_table())
+        # print(*self.get_processes_from_table())
+        simulation = Simulation(scheduler)
+        from src.GUI.run_live_scene import RunLiveScene
+        self.run_live_scene = RunLiveScene(simulation,self.next_pid)
+        self.run_live_scene.show()
+        self.close()
+

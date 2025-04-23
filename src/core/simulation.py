@@ -25,7 +25,7 @@ class Simulation:
         process = Process(
             pid=pid,
             name=name,
-            arrival_time=self.scheduler.current_time,
+            arrival_time=current_time,
             burst_time=burst_time,
             priority=priority,
         )
@@ -41,6 +41,10 @@ class Simulation:
         """Reset the simulation."""
         self.scheduler.hard_reset()
 
+    def is_running(self) -> bool:
+        """Check if the simulation is running."""
+        return self.running
+
     def start(self):
         self.running = True
         self.paused = False
@@ -48,17 +52,13 @@ class Simulation:
         simulation_thread.daemon = True
         simulation_thread.start()
 
-    def stop(self):
-        """Stop the simulation."""
-        self.running = False
-        self.paused = False
+    def is_paused(self) -> bool:
+        """Check if the simulation is paused."""
+        return self.paused
 
-    def pause(self):
-        self.running = False
-        self.paused = True
-
-    def resume(self):
-        self.paused = False
+    def set_paused(self, paused: bool):
+        """Set the simulation to paused or unpaused."""
+        self.paused = paused
 
     def set_speed(self, speed_factor: int):
         if speed_factor <= 0:
@@ -66,29 +66,23 @@ class Simulation:
         else:
             self.delay = 1.0 / speed_factor
 
-    def run_all_at_once(self):
-        """
-        Run all processes without delay and display the final result.
-        """
-        # Reset the simulation state
-        self.reset()
 
-        # Run until all processes are completed
-        while not self.scheduler.all_processes_completed():
-            self.scheduler.run_tick()
-
-    def _run_simulation(self):
+    def _run_simulation(self, useDelay: bool = True):
         """
         Run the simulation with a delay between each tick.
         """
         while (self.running) and (not self.scheduler.all_processes_completed()):
-            if not self.paused:
-                # Run a single tick
-                self.scheduler.run_tick()
 
-                # Wait for the specified delay
+            current_process = self.scheduler.run_tick()
+
+            # Wait for the specified delay
+            if useDelay:
                 time.sleep(self.delay)
+            
+            yield current_process
+                
         self.running = False
+        return self.running
 
     def get_cpu_utilization(self) -> float:
         raise NotImplementedError("CPU utilization calculation is not implemented.")
@@ -98,19 +92,3 @@ class Simulation:
 
     def has_results(self) -> bool:
         return self.scheduler.all_processes_completed()
-
-    def get_timeline_entries(self):
-        entries = []
-
-        if (not self.scheduler) or (not self.scheduler.processes):
-            return entries
-
-        for process in self.scheduler.processes:
-            for execution in process.get_execution_history():
-                start, end = execution.get_start_time(), execution.get_end_time()
-                entries.append((process, start, end))
-
-        # Sort by start time
-        entries.sort(key=lambda x: x[1])
-
-        return entries
