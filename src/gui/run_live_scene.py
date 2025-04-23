@@ -1,10 +1,45 @@
-from PyQt6.QtWidgets import QWidget, QTableWidgetItem, QHBoxLayout
+from PyQt6.QtWidgets import QWidget, QTableWidgetItem, QMainWindow, QVBoxLayout
 from PyQt6 import uic
 import os
 from src.core.simulation import Simulation
 from src.models.process import Process
 import threading
 from src.gui.ganttchart import GanttCanvas
+
+
+class GanttChartWindow(QMainWindow):
+    """A separate window to display the Gantt chart during live simulation."""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Live Gantt Chart")
+        self.resize(800, 400)
+        
+        # Create central widget
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        
+        # Create layout
+        layout = QVBoxLayout(central_widget)
+        
+        # Create the Gantt chart canvas
+        self.gantt_canvas = GanttCanvas(self)
+        layout.addWidget(self.gantt_canvas)
+        
+    def update_chart(self, processes_timeline):
+        """Update the Gantt chart with the latest process timeline."""
+        if not processes_timeline:
+            return
+        
+        try:
+            # Update the chart
+            self.gantt_canvas.plot_gantt_chart(processes_timeline)
+            
+            # Process events to ensure chart is rendered immediately
+            from PyQt6.QtCore import QCoreApplication
+            QCoreApplication.processEvents()
+        except Exception as e:
+            print(f"Error updating Gantt chart in separate window: {e}")
 
 
 class RunLiveScene(QWidget):
@@ -35,14 +70,8 @@ class RunLiveScene(QWidget):
         self.pauseButton.clicked.connect(self.pause_simulation)  # Pause button
         self.returnToInputSceneButton.clicked.connect(self.return_to_input)
 
-        # Create the canvas for the Gantt chart
-        self.gantt_canvas = GanttCanvas(self)
-
-        # Create a layout for the placeholder frame and add the canvas
-        layout = QHBoxLayout(self.ganttPlaceHolder)
-        layout.addWidget(self.gantt_canvas)
-        layout.setContentsMargins(0, 0, 0, 0)  # Remove margins for better appearance
-        self.ganttPlaceHolder.setLayout(layout)
+        # Create the Gantt chart window but don't show it yet
+        self.gantt_chart_window = GanttChartWindow(self)
 
         # Create table and populate it
         processes = self.simulation.scheduler.get_processes()
@@ -84,6 +113,9 @@ class RunLiveScene(QWidget):
             burst_time = int(self.burstTimeSpinBox.value())
             priority = int(self.prioritySpinBox.value())
             pid = self.next_pid
+            
+            # Increment the next PID for the next process
+            self.next_pid += 1
 
             with self.lock:
                 # Create process and add it to the scheduler
@@ -120,8 +152,6 @@ class RunLiveScene(QWidget):
                     row, 7, QTableWidgetItem("N/A")
                 )  # Response time is not available yet
 
-            # Increment the next PID for the next process
-            self.next_pid += 1
 
             # Clear the input fieldsets =
             self.processNameTextBox.clear()
@@ -134,7 +164,9 @@ class RunLiveScene(QWidget):
         threading.Thread(target=add_process_thread, daemon=True).start()
 
     def run_live(self):
-
+        # Show the Gantt chart window when starting the simulation
+        self.gantt_chart_window.show()
+        
         def run_live_thread():
             live_simulation = None
             self.simulation.start()
@@ -173,6 +205,10 @@ class RunLiveScene(QWidget):
     def return_to_input(self):
         from src.gui.process_input_scene import ProcessInputScene
 
+        # Close the Gantt chart window when returning to input scene
+        if hasattr(self, 'gantt_chart_window'):
+            self.gantt_chart_window.close()
+            
         self.return_to_input_scene = ProcessInputScene()
         self.return_to_input_scene.show()
         self.close()
@@ -215,22 +251,13 @@ class RunLiveScene(QWidget):
 
     def update_gantt_chart(self):
         """
-        Update the Gantt chart with process execution timeline.
-        This method is thread-safe and will update the chart with the latest process timeline.
+        Update the Gantt chart in the separate window with process execution timeline.
         """
         if not self.simulation.processes_timeline:
             return
 
         try:
-            # Use QApplication.processEvents() to ensure UI updates correctly during simulation
-            from PyQt6.QtCore import QCoreApplication
-
-            QCoreApplication.processEvents()
-
-            # Use the plot_gantt_chart method from our GanttCanvas class to update the chart
-            self.gantt_canvas.plot_gantt_chart(self.simulation.processes_timeline)
-
-            # Process events to ensure chart is rendered immediately
-            QCoreApplication.processEvents()
+            # Update only the separate window Gantt chart
+            self.gantt_chart_window.update_chart(self.simulation.processes_timeline)
         except Exception as e:
             print(f"Error updating Gantt chart: {e}")
