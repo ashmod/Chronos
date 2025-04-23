@@ -1,9 +1,10 @@
-from PyQt6.QtWidgets import QWidget, QTableWidgetItem
+from PyQt6.QtWidgets import QWidget, QTableWidgetItem, QHBoxLayout
 from PyQt6 import uic
 import os
 from src.core.simulation import Simulation
 from src.models.process import Process
 import threading
+from src.gui.ganttchart import GanttCanvas
 
 class RunLiveScene(QWidget):
     """This class represents the live simulation scene in the gui."""
@@ -18,9 +19,10 @@ class RunLiveScene(QWidget):
         self.next_pid: int = next_pid
         self.lock = threading.Lock()
         self.gantt_lock = threading.Lock()
-        self.gantt_process = None
         # Load the UI
         uic.loadUi(ui_file, self)
+
+        self.showMaximized()
         
         # Initialize UI elements
         self.setup_ui()
@@ -33,6 +35,15 @@ class RunLiveScene(QWidget):
         self.pauseButton.clicked.connect(self.pause_simulation)  # Pause button
         self.returnToInputSceneButton.clicked.connect(self.return_to_input)
         
+        # Create the canvas for the Gantt chart
+        self.gantt_canvas = GanttCanvas(self)
+        
+        
+        # Create a layout for the placeholder frame and add the canvas
+        layout = QHBoxLayout(self.ganttPlaceHolder)
+        layout.addWidget(self.gantt_canvas)
+        self.ganttPlaceHolder.setLayout(layout)
+
         # Create table and populate it
         processes = self.simulation.scheduler.get_processes()
         self.processStatsTable.setRowCount(len(processes))
@@ -121,11 +132,11 @@ class RunLiveScene(QWidget):
                 # Updates current process in the table
                 print("Updating row")
                 self.update_row_per_tick(current_process)
-                
                 # Update the Gantt chart with the current process
                 with self.gantt_lock:
                     print("Updating Gantt chart")
-                    self.gantt_process = current_process
+                    self.simulation.processes_timeline.append(current_process)
+                    self.update_gantt_chart()
                     
                 if self.simulation.scheduler.all_processes_completed():
                     # All processes are completed, stop the simulation
@@ -174,3 +185,13 @@ class RunLiveScene(QWidget):
                     self.processStatsTable.setItem(row, 6, QTableWidgetItem(str(turnaround_time)))
                     self.processStatsTable.setItem(row, 7, QTableWidgetItem(str(response_time)))
                 break
+
+    def update_gantt_chart(self):
+        """
+        Update the Gantt chart with process execution timeline
+        """
+        if not self.simulation.processes_timeline:
+            return
+            
+        # Use the plot_gantt_chart method from our GanttCanvas class
+        self.gantt_canvas.plot_gantt_chart(self.simulation.processes_timeline)

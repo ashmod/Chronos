@@ -14,12 +14,11 @@ class RunAtOnceScene(QWidget):
         current_dir = os.path.dirname(os.path.abspath(__file__))
         ui_file = os.path.join(current_dir, "PyQtUI", "runAtOnceSceneUI.ui")
         
-        # Create timestep proces list
-        self.processes_timeline = list()
-        
         # Load the UI
         uic.loadUi(ui_file, self)
         
+        self.showMaximized()
+
         # Initialize UI elements
         self.setup_ui()
         self.run_algorithm()
@@ -61,7 +60,7 @@ class RunAtOnceScene(QWidget):
         while not self.simulation.scheduler.all_processes_completed():
             try:
                 current_process = next(status)
-                self.processes_timeline.append(current_process)
+                self.simulation.processes_timeline.append(current_process)
             except StopIteration:
                 break   # Break out of while if you reach method return
 
@@ -95,8 +94,8 @@ class RunAtOnceScene(QWidget):
         """
         Update the Gantt chart with process execution timeline
         """
-        if not self.processes_timeline:
+        if not self.simulation.processes_timeline:
             return
             
         # Use the plot_gantt_chart method from our GanttCanvas class
-        self.gantt_canvas.plot_gantt_chart(self.processes_timeline)
+        self.gantt_canvas.plot_gantt_chart(self.simulation.processes_timeline)

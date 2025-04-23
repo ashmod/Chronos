@@ -10,6 +10,7 @@ class Simulation:
         self.delay = delay
         self.running = False
         self.paused = False
+        self.processes_timeline = []
 
     def add_process(self, process: Process):
         self.scheduler.add_process(process)

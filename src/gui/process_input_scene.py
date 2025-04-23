@@ -21,6 +21,8 @@ class ProcessInputScene(QWidget):
         ui_file = os.path.join(current_dir, "PyQtUI", "processInputSceneUI.ui")
         uic.loadUi(ui_file, self)
         
+        self.showMaximized()
+
         # Create simulation with initial scheduler
         # initial_scheduler = self._create_scheduler(self.algorithmComboBox.currentText())
         # self.simulation = Simulation(None)
