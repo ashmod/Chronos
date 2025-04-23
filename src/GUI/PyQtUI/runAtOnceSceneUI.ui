@@ -48,6 +48,16 @@
           <string>Name</string>
          </property>
         </column>
+        <column> 
+         <property name="text">
+          <string>Arrival Time</string>
+         </property>
+        </column>
+        <column> 
+         <property name="text">
+          <string>Burst Time</string>
+         </property>
+        </column>
         <column>
          <property name="text">
           <string>Waiting Time</string>

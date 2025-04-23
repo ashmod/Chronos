@@ -1,1 +1,1 @@
-#GUI Package
+#gui Package

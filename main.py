@@ -1,8 +1,8 @@
 import sys
 from PyQt6.QtWidgets import QApplication, QMainWindow
-from src.GUI.process_input_scene import ProcessInputScene
-from src.GUI.run_live_scene import RunLiveScene
-from src.GUI.run_at_once_scene import RunAtOnceScene
+from src.gui.process_input_scene import ProcessInputScene
+from src.gui.run_live_scene import RunLiveScene
+from src.gui.run_at_once_scene import RunAtOnceScene
 
 class MainWindow(QMainWindow):
     def __init__(self):

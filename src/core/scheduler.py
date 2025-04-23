@@ -30,6 +30,10 @@ class Scheduler(ABC):
         """Add multiple processes to the scheduler"""
         self.processes.extend(processes)
 
+    def get_processes(self) -> list:
+        """" Getter method for the processes list"""
+        return self.processes
+
     def reset(self):
         """Reset only the scheduler state without resetting processes."""
         self.current_time = 0

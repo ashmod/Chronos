@@ -145,7 +145,7 @@ class ProcessInputScene(QWidget):
         scheduler.add_processes(self.get_processes_from_table())
         # print(*self.get_processes_from_table())
         simulation = Simulation(scheduler)
-        from src.GUI.run_at_once_scene import RunAtOnceScene
+        from src.gui.run_at_once_scene import RunAtOnceScene
         self.run_at_once_scene = RunAtOnceScene(simulation)
         self.run_at_once_scene.show()
         self.close()  
@@ -155,7 +155,7 @@ class ProcessInputScene(QWidget):
         scheduler.add_processes(self.get_processes_from_table())
         # print(*self.get_processes_from_table())
         simulation = Simulation(scheduler)
-        from src.GUI.run_live_scene import RunLiveScene
+        from src.gui.run_live_scene import RunLiveScene
         self.run_live_scene = RunLiveScene(simulation,self.next_pid)
         self.run_live_scene.show()
         self.close()

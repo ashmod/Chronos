@@ -11,7 +11,7 @@ class RoundRobinScheduler(Scheduler):
     Processes are executed in a circular queue.
     """
 
-    def __init__(self, time_quantum=2):
+    def __init__(self, time_quantum:int = 2, time_slice:int = 1):
         """
         Initialize a new RoundRobinScheduler instance.
 
@@ -20,7 +20,7 @@ class RoundRobinScheduler(Scheduler):
         """
         super().__init__("Round Robin")
         self.time_quantum = time_quantum
-        self.time_slice = 1  # Set time slice to 1 to control execution more precisely
+        self.time_slice = time_slice  # Set time slice to 1 to control execution more precisely
         self.ready_queue = deque()
         self.current_process = None
         self.current_quantum_used = 0  # Track how much of the quantum has been used
@@ -32,7 +32,8 @@ class RoundRobinScheduler(Scheduler):
         Args:
             process (Process): The process to add
         """
-        super().add_process(process)
+        self.processes.append(process)
+        self.ready_queue.append(process)
 
     def reset(self):
         """Reset the scheduler state for a new simulation."""
@@ -51,14 +52,6 @@ class RoundRobinScheduler(Scheduler):
         Returns:
             Optional[Process]: The next process to execute, or None if no process is ready
         """
-        # Get all processes that have arrived by the current time and haven't completed
-        arrived_processes = self.get_arrived_processes(current_time)
-
-        # Add newly arrived processes to the ready queue
-        for process in arrived_processes:
-            if process not in self.ready_queue and process != self.current_process:
-                self.ready_queue.append(process)
-
         # If we have a current process, check if it should continue running
         if self.current_process:
             # Check if the process has completed
@@ -66,7 +59,7 @@ class RoundRobinScheduler(Scheduler):
                 self.current_process = None
                 self.current_quantum_used = 0
             # Check if the quantum has expired
-            elif self.current_quantum_used >= self.time_quantum:
+            elif self.current_quantum_used == self.time_quantum: 
                 # Move the process to the back of the queue if not completed
                 self.ready_queue.append(self.current_process)
                 self.current_process = None
@@ -76,12 +69,9 @@ class RoundRobinScheduler(Scheduler):
         if not self.current_process and self.ready_queue:
             self.current_process = self.ready_queue.popleft()
             self.current_quantum_used = 0
-            # Record the first execution if not already set
-            if self.current_process.get_start_time() is None:
-                self.current_process.get_start_time() = current_time
 
         # If we have a current process, increment the quantum counter
         if self.current_process:
-            self.current_quantum_used += 1
+            self.current_quantum_used += self.time_slice
 
         return self.current_process

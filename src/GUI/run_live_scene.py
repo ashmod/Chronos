@@ -3,8 +3,9 @@ from PyQt6 import uic
 import os
 from src.core.simulation import Simulation
 import threading
+
 class RunLiveScene(QWidget):
-    # This class represents the live simulation scene in the GUI.
+    """This class represents the live simulation scene in the gui."""
     
     def __init__(self,simulation: Simulation, next_pid: int):
         super().__init__()
@@ -95,7 +96,7 @@ class RunLiveScene(QWidget):
         
     
     def return_to_input(self):
-        from src.GUI.process_input_scene import ProcessInputScene
+        from src.gui.process_input_scene import ProcessInputScene
         self.return_to_input_scene = ProcessInputScene()
         self.return_to_input_scene.show()
         self.close()  
