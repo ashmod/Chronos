@@ -118,13 +118,13 @@ class GanttCanvas(FigureCanvasQTAgg):
                                      linewidth=1, alpha=0.85, zorder=2)
                 
                 # Add process info as text in the middle of the segment
-                if end - start > 1:
-                    pname = process.get_name()
-                    display_name = f"{pname} (P{pid})" if end - start > 4 else f"P{pid}"
-                    self.axes.text((start + end) / 2, y_pos, display_name,
-                                 ha='center', va='center', color='white',
-                                 fontweight='bold', fontsize=10, zorder=5)
-                
+                # if end - start > 1:
+                pname = process.get_name()
+                display_name = f"{pname} (P{pid})" if end - start > 4 else f"P{pid}"
+                self.axes.text((start + end) / 2, y_pos, display_name,
+                                ha='center', va='center', color='white',
+                                fontweight='bold', fontsize=10, zorder=5)
+            
                 # Add initial and final time markers
                 time_markers.add(start)
                 time_markers.add(end)
@@ -167,7 +167,7 @@ class GanttCanvas(FigureCanvasQTAgg):
         if legend_patches:
             self.axes.legend(
                 handles=legend_patches, loc='upper center',
-                bbox_to_anchor=(0.5, -0.12), ncol=min(4, len(legend_patches)),
+                bbox_to_anchor=(0.5, -0.2), ncol=min(4, len(legend_patches)),  # Moved from -0.12 to -0.2
                 frameon=True, fancybox=True, shadow=True
             )
         
@@ -214,6 +214,7 @@ class GanttCanvas(FigureCanvasQTAgg):
         # Add a subtle background grid
         self.axes.set_facecolor('#f8f9fa')
         
+        #TODO: CHECK THIS AGAIN
         # Add average metrics as text on the chart if available
         processes = [p for p in process_timeline if p is not None]
         if processes:
@@ -244,7 +245,10 @@ class GanttCanvas(FigureCanvasQTAgg):
         
         # Ensure legend fits within figure bounds
         if legend_patches:
-            self.fig.subplots_adjust(bottom=0.2)
+            num_processes = len(legend_patches)
+            legend_rows = (num_processes + 3) // 4  # 4 items per row
+            bottom_margin = 0.15 + (legend_rows * 0.05)  # Base margin + extra space per row
+            self.fig.subplots_adjust(bottom=bottom_margin)
             
         self.draw()
 

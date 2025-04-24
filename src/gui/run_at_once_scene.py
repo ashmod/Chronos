@@ -25,7 +25,16 @@ class RunAtOnceScene(QWidget):
     
     def setup_ui(self):
         # Create the canvas for the Gantt chart
-        self.gantt_canvas = GanttCanvas(self)
+        self.gantt_canvas = GanttCanvas()
+
+         # Set fixed minimum size for the placeholder to ensure visibility
+        self.ganttPlaceHolder.setMinimumSize(800, 400)  # width: 800px, height: 400px
+        # Set maximum size to prevent excessive scaling
+        self.ganttPlaceHolder.setMaximumHeight(800)  # max height: 800px    
+        
+        # # Set size policy to maintain aspect ratio
+        # self.gantt_canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        # self.ganttPlaceHolder.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         
         # Set stretch factors in the main layout to make them equal
         main_layout = self.verticalLayout
