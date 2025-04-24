@@ -30,8 +30,8 @@ class Scheduler(ABC):
         """Add multiple processes to the scheduler"""
         self.processes.extend(processes)
 
-    def get_processes(self) -> list:
-        """" Getter method for the processes list"""
+    def get_processes(self) -> list[Process]:
+        """Getter method for the processes list"""
         return self.processes
 
     def reset(self):
@@ -167,7 +167,7 @@ class Scheduler(ABC):
             time_used = self.current_process.execute(self.current_time, self.time_slice)
 
             # If the process has completed, add it to completed processes
-            if (self.current_process.is_completed()):
+            if self.current_process.is_completed():
                 self.completed_processes.append(self.current_process)
         else:
             # CPU is idle
@@ -175,5 +175,5 @@ class Scheduler(ABC):
 
         # Advance the time
         self.current_time += time_used
-        
+
         return self.current_process

@@ -11,7 +11,7 @@ class RoundRobinScheduler(Scheduler):
     Processes are executed in a circular queue.
     """
 
-    def __init__(self, time_quantum:int = 2, time_slice:int = 1):
+    def __init__(self, time_quantum: int = 2):
         """
         Initialize a new RoundRobinScheduler instance.
 
@@ -19,10 +19,8 @@ class RoundRobinScheduler(Scheduler):
             time_quantum (int): The time quantum for each process (default: 2)
         """
         super().__init__("Round Robin")
-        self.time_quantum = time_quantum
-        self.time_slice = time_slice  # Set time slice to 1 to control execution more precisely
+        self.TIME_QUANTUM = time_quantum  # constant for time quantum
         self.ready_queue = deque()
-        self.current_process = None
         self.current_quantum_used = 0  # Track how much of the quantum has been used
 
     def add_process(self, process: Process):
@@ -32,14 +30,15 @@ class RoundRobinScheduler(Scheduler):
         Args:
             process (Process): The process to add
         """
-        self.processes.append(process)
-        self.ready_queue.append(process)
+        super().add_process(process)
 
     def reset(self):
         """Reset the scheduler state for a new simulation."""
+        # Call the parent's reset method instead of hard_reset to avoid recursion
         super().reset()
+        for process in self.processes:
+            process.reset()
         self.ready_queue = deque()
-        self.current_process = None
         self.current_quantum_used = 0
 
     def get_next_process(self, current_time) -> Optional[Process]:
@@ -52,26 +51,40 @@ class RoundRobinScheduler(Scheduler):
         Returns:
             Optional[Process]: The next process to execute, or None if no process is ready
         """
-        # If we have a current process, check if it should continue running
+        for process in self.get_arrived_processes(current_time):
+            if (process not in self.ready_queue) and (process != self.current_process):
+                self.ready_queue.append(process)
+
         if self.current_process:
-            # Check if the process has completed
             if self.current_process.is_completed():
+                # Add to completed processes before setting to None
+                self.completed_processes.append(self.current_process)
                 self.current_process = None
                 self.current_quantum_used = 0
-            # Check if the quantum has expired
-            elif self.current_quantum_used == self.time_quantum: 
-                # Move the process to the back of the queue if not completed
+            elif self.current_quantum_used == self.TIME_QUANTUM:
                 self.ready_queue.append(self.current_process)
                 self.current_process = None
                 self.current_quantum_used = 0
 
-        # If there's no current process but we have processes in the queue, get the next one
-        if not self.current_process and self.ready_queue:
+        if (not self.current_process) and (len(self.ready_queue) > 0):
             self.current_process = self.ready_queue.popleft()
             self.current_quantum_used = 0
+        return self.current_process
 
-        # If we have a current process, increment the quantum counter
+    def run_tick(self) -> Process:
+        """
+        Override the run_tick method to properly handle quantum time tracking.
+
+        Returns:
+            Optional[Process]: The process that was executed in this tick, or None if idle
+        """
+        self.get_next_process(self.current_time)
+
+        time_used = self.time_slice
         if self.current_process:
-            self.current_quantum_used += self.time_slice
+            time_used = self.current_process.execute(self.current_time, self.time_slice)
+            self.current_quantum_used += time_used
+
+        self.current_time += time_used
 
         return self.current_process

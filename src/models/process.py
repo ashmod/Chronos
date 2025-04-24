@@ -109,7 +109,7 @@ class Process:
 
     def get_start_time(self) -> Optional[int]:
         return self.__start_time
-    
+
     def get_arrival_time(self) -> int:
         return self.__arrival_time
 
@@ -118,7 +118,7 @@ class Process:
 
     def get_turnaround_time(self) -> int:
         return self.__turnaround_time
-    
+
     def get_completion_time(self) -> Optional[int]:
         return self.__completion_time
 
@@ -133,9 +133,12 @@ class Process:
 
     def get_burst_time(self) -> int:
         return self.__burst_time
-    
+
     def get_remaining_time(self) -> int:
         return self.__remaining_time
+
+    def get_arrival_time(self) -> int:
+        return self.__arrival_time
 
     def __str__(self):
         """String representation of the process."""
