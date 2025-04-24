@@ -1,6 +1,6 @@
-from PyQt6.QtWidgets import QWidget, QTableWidgetItem
-from PyQt6.QtCore import Qt
-from PyQt6 import uic
+from PyQt5.QtWidgets import QWidget, QTableWidgetItem
+from PyQt5.QtCore import Qt
+from PyQt5 import uic
 import os
 from src.core.scheduler import Scheduler
 from src.core.simulation import Simulation
@@ -70,7 +70,7 @@ class ProcessInputScene(QWidget):
 
     def import_processes(self) -> None:
         """ Import processes from a csv file and add them to the table. """
-        from PyQt6.QtWidgets import QFileDialog, QMessageBox
+        from PyQt5.QtWidgets import QFileDialog, QMessageBox
         import csv
 
         file_dialog = QFileDialog(self)

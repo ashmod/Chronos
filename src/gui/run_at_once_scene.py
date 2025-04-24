@@ -1,5 +1,5 @@
-from PyQt6.QtWidgets import QWidget, QHBoxLayout, QSizePolicy, QTableWidgetItem
-from PyQt6 import uic
+from PyQt5.QtWidgets import QWidget, QHBoxLayout, QSizePolicy, QTableWidgetItem
+from PyQt5 import uic
 from typing import Generator
 import os
 from src.core.simulation import Simulation

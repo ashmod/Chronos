@@ -1,5 +1,5 @@
-from PyQt6.QtWidgets import QWidget, QTableWidgetItem, QMainWindow, QVBoxLayout
-from PyQt6 import uic
+from PyQt5.QtWidgets import QWidget, QTableWidgetItem, QMainWindow, QVBoxLayout
+from PyQt5 import uic
 import os
 from src.core.simulation import Simulation
 from src.models.process import Process
@@ -36,7 +36,7 @@ class GanttChartWindow(QMainWindow):
             self.gantt_canvas.plot_gantt_chart(processes_timeline)
             
             # Process events to ensure chart is rendered immediately
-            from PyQt6.QtCore import QCoreApplication
+            from PyQt5.QtCore import QCoreApplication
             QCoreApplication.processEvents()
         except Exception as e:
             print(f"Error updating Gantt chart in separate window: {e}")
@@ -113,6 +113,9 @@ class RunLiveScene(QWidget):
             burst_time = int(self.burstTimeSpinBox.value())
             priority = int(self.prioritySpinBox.value())
             pid = self.next_pid
+
+            if not name:  # If name is empty or only whitespace
+                name = f"Process {pid}"
             
             # Increment the next PID for the next process
             self.next_pid += 1

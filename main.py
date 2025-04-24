@@ -1,5 +1,5 @@
 import sys
-from PyQt6.QtWidgets import QApplication, QMainWindow
+from PyQt5.QtWidgets import QApplication, QMainWindow
 from src.gui.process_input_scene import ProcessInputScene
 from src.gui.run_live_scene import RunLiveScene
 from src.gui.run_at_once_scene import RunAtOnceScene
@@ -17,23 +17,6 @@ class MainWindow(QMainWindow):
         
         # Set the initial scene as the process input scene
         self.setCentralWidget(self.process_input_scene)
-        
-        # Uncomment these lines to test different scenes:
-        # --- Test Run Live Scene ---
-        # self.setCentralWidget(self.run_live_scene)
-        
-        # --- Test Run At Once Scene ---
-        # self.setCentralWidget(self.run_at_once_scene)
-        
-        # Example of how to switch scenes programmatically:
-        # def switch_to_live_scene(self):
-        #     self.setCentralWidget(self.run_live_scene)
-        #
-        # def switch_to_at_once_scene(self):
-        #     self.setCentralWidget(self.run_at_once_scene)
-        #
-        # def back_to_process_input(self):
-        #     self.setCentralWidget(self.process_input_scene)
 
 def main():
     """Main entry point for the CHRONOS CPU Scheduler application."""
