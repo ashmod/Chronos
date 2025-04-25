@@ -37,7 +37,7 @@ class ProcessInputScene(QWidget):
         # Connect signals
         self.addProcessButton.clicked.connect(self.add_process)
         self.removeProcessButton.clicked.connect(self.remove_process)
-        self.editProcessButton.clicked.connect(self.edit_process)
+        # self.editProcessButton.clicked.connect(self.edit_process)
         self.resetTableButton.clicked.connect(self.reset_table)
         self.runLiveSimulationButton.clicked.connect(self.goto_run_live_simulation)
         self.runAtOnceButton.clicked.connect(self.goto_run_at_once)
@@ -67,6 +67,10 @@ class ProcessInputScene(QWidget):
     def on_algorithm_changed(self):
         self.update_time_quantum_visibility()
         self.update_priority_visibility()
+        if "Priority" in self.algorithmComboBox.currentText():
+            self.processTableWidget.setColumnHidden(4, False)  # Show priority column
+        else:
+            self.processTableWidget.setColumnHidden(4, True)  # Hide priority column
 
     def import_processes(self) -> None:
         """ Import processes from a csv file and add them to the table. """

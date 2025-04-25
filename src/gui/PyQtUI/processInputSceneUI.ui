@@ -6,90 +6,67 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>689</width>
-    <height>586</height>
+    <width>884</width>
+    <height>730</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
   <layout class="QGridLayout" name="gridLayout">
-   <item row="0" column="0" colspan="4">
-    <widget class="QLabel" name="label">
+   <item row="7" column="1" colspan="2">
+    <widget class="QSpinBox" name="prioritySpinBox"/>
+   </item>
+   <item row="6" column="0">
+    <widget class="QLabel" name="label_6">
      <property name="text">
-      <string>Choose CPU Scheduling Algorithm</string>
+      <string>Burst Time</string>
      </property>
     </widget>
    </item>
-   <item row="1" column="0" colspan="4">
-    <widget class="QComboBox" name="algorithmComboBox">
-     <property name="enabled">
-      <bool>true</bool>
-     </property>
-     <item>
-      <property name="text">
-       <string>First-Come, First-Served (FCFS)</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Shortest Job First (Preemptive)</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Shortest Job First (Non-Preemptive)</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Priority (Preemptive)</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Priority (Non-Preemptive)</string>
-      </property>
-     </item>
-     <item>
-      <property name="text">
-       <string>Round Robin</string>
-      </property>
-     </item>
-    </widget>
-   </item>
-   <item row="2" column="0">
-    <widget class="QLabel" name="label_3">
+   <item row="10" column="3">
+    <widget class="QPushButton" name="resetTableButton">
      <property name="text">
-      <string>Time Quantum</string>
+      <string>Reset Table</string>
      </property>
     </widget>
    </item>
-   <item row="2" column="3">
-    <widget class="QSpinBox" name="timeQuantumSpinBox">
-     <property name="readOnly">
-      <bool>false</bool>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="0">
-    <widget class="QLabel" name="label_2">
+   <item row="8" column="0" colspan="2">
+    <widget class="QPushButton" name="addProcessButton">
      <property name="text">
-      <string>Process Details</string>
+      <string>Add Process</string>
      </property>
     </widget>
    </item>
-   <item row="4" column="0">
-    <widget class="QLabel" name="label_4">
+   <item row="10" column="4">
+    <widget class="QPushButton" name="removeProcessButton">
      <property name="text">
-      <string>Name</string>
+      <string>Remove Process</string>
      </property>
     </widget>
    </item>
-   <item row="4" column="1" colspan="3">
-    <widget class="QLineEdit" name="processNameTextBox"/>
+   <item row="11" column="1">
+    <widget class="QPushButton" name="runAtOnceButton">
+     <property name="text">
+      <string>Run At Once</string>
+     </property>
+    </widget>
    </item>
-   <item row="9" column="0" colspan="6">
+   <item row="6" column="1" colspan="2">
+    <widget class="QSpinBox" name="burstTimeSpinBox">
+     <property name="minimum">
+      <number>1</number>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="0">
+    <widget class="QLabel" name="label_7">
+     <property name="text">
+      <string>Priority</string>
+     </property>
+    </widget>
+   </item>
+   <item row="9" column="0" colspan="5">
     <widget class="QTableWidget" name="processTableWidget">
      <property name="enabled">
       <bool>true</bool>
@@ -139,65 +116,10 @@
      </column>
     </widget>
    </item>
-   <item row="6" column="0">
-    <widget class="QLabel" name="label_6">
+   <item row="10" column="0">
+    <widget class="QPushButton" name="importButton">
      <property name="text">
-      <string>Burst Time</string>
-     </property>
-    </widget>
-   </item>
-   <item row="6" column="1" colspan="2">
-    <widget class="QSpinBox" name="burstTimeSpinBox">
-     <property name="minimum">
-      <number>1</number>
-     </property>
-    </widget>
-   </item>
-   <item row="10" column="5">
-    <widget class="QPushButton" name="removeProcessButton">
-     <property name="text">
-      <string>Remove Process</string>
-     </property>
-    </widget>
-   </item>
-   <item row="8" column="0" colspan="2">
-    <widget class="QPushButton" name="addProcessButton">
-     <property name="text">
-      <string>Add Process</string>
-     </property>
-    </widget>
-   </item>
-   <item row="10" column="4">
-    <widget class="QPushButton" name="editProcessButton">
-     <property name="text">
-      <string>Edit Process</string>
-     </property>
-    </widget>
-   </item>
-   <item row="5" column="0">
-    <widget class="QLabel" name="label_5">
-     <property name="text">
-      <string>Arrival Time</string>
-     </property>
-    </widget>
-   </item>
-   <item row="5" column="1" colspan="2">
-    <widget class="QSpinBox" name="arrivalTimeSpinBox"/>
-   </item>
-   <item row="7" column="1" colspan="2">
-    <widget class="QSpinBox" name="prioritySpinBox"/>
-   </item>
-   <item row="7" column="0">
-    <widget class="QLabel" name="label_7">
-     <property name="text">
-      <string>Priority</string>
-     </property>
-    </widget>
-   </item>
-   <item row="11" column="1">
-    <widget class="QPushButton" name="runAtOnceButton">
-     <property name="text">
-      <string>Run At Once</string>
+      <string>Import Processes</string>
      </property>
     </widget>
    </item>
@@ -208,17 +130,91 @@
      </property>
     </widget>
    </item>
-   <item row="10" column="3">
-    <widget class="QPushButton" name="resetTableButton">
+   <item row="1" column="0" colspan="4">
+    <widget class="QComboBox" name="algorithmComboBox">
+     <property name="enabled">
+      <bool>true</bool>
+     </property>
+     <item>
+      <property name="text">
+       <string>First-Come, First-Served (FCFS)</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Shortest Job First (Preemptive)</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Shortest Job First (Non-Preemptive)</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Priority (Preemptive)</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Priority (Non-Preemptive)</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Round Robin</string>
+      </property>
+     </item>
+    </widget>
+   </item>
+   <item row="0" column="0" colspan="4">
+    <widget class="QLabel" name="label">
      <property name="text">
-      <string>Reset Table</string>
+      <string>Choose CPU Scheduling Algorithm</string>
      </property>
     </widget>
    </item>
-   <item row="10" column="0">
-    <widget class="QPushButton" name="importButton">
+   <item row="2" column="0">
+    <widget class="QLabel" name="label_3">
      <property name="text">
-      <string>Import Processes</string>
+      <string>Time Quantum</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="0">
+    <widget class="QLabel" name="label_2">
+     <property name="text">
+      <string>Process Details</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="0">
+    <widget class="QLabel" name="label_4">
+     <property name="text">
+      <string>Name</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="1" colspan="3">
+    <widget class="QLineEdit" name="processNameTextBox"/>
+   </item>
+   <item row="5" column="1" colspan="2">
+    <widget class="QSpinBox" name="arrivalTimeSpinBox"/>
+   </item>
+   <item row="5" column="0">
+    <widget class="QLabel" name="label_5">
+     <property name="text">
+      <string>Arrival Time</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="1">
+    <widget class="QSpinBox" name="timeQuantumSpinBox">
+    <property name="minimum">
+      <number>1</number>
+     </property>
+     <property name="readOnly">
+      <bool>false</bool>
      </property>
     </widget>
    </item>

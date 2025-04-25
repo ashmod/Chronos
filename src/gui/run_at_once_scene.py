@@ -46,7 +46,11 @@ class RunAtOnceScene(QWidget):
         layout = QHBoxLayout(self.ganttPlaceHolder)
         layout.addWidget(self.gantt_canvas)
         self.ganttPlaceHolder.setLayout(layout)
-        
+
+        if "Priority" not in self.simulation.scheduler.name:
+            # Hide the priority column if the scheduler is not priority-based
+            self.processStatsTable.setColumnHidden(4, True)
+
         # Connect return button signal
         self.returnToInputSceneButton.clicked.connect(self.return_to_input)
 
@@ -75,6 +79,9 @@ class RunAtOnceScene(QWidget):
 
         # Update the process table after finishing the simulation
         self.update_process_table()
+        # Update Average waiting time and turnaround time labels
+        self.averageWaitingTimeTextBox.setText(str(self.simulation.scheduler.get_average_waiting_time()))
+        self.averageTurnaroundTimeTextBox.setText(str(self.simulation.scheduler.get_average_turnaround_time()))
         # Update the Gantt chart with the collected process timeline
         self.update_gantt_chart()
         return
@@ -95,9 +102,12 @@ class RunAtOnceScene(QWidget):
             self.processStatsTable.setItem(row, 1, QTableWidgetItem(process.get_name()))
             self.processStatsTable.setItem(row, 2, QTableWidgetItem(str(process.get_arrival_time())))
             self.processStatsTable.setItem(row, 3, QTableWidgetItem(str(process.get_burst_time())))
-            self.processStatsTable.setItem(row, 4, QTableWidgetItem(str(waiting_time)))
-            self.processStatsTable.setItem(row, 5, QTableWidgetItem(str(turnaround_time)))
-            self.processStatsTable.setItem(row, 6, QTableWidgetItem(str(response_time)))
+            self.processStatsTable.setItem(row, 4, QTableWidgetItem(str(process.get_priority())))
+            self.processStatsTable.setItem(row, 5, QTableWidgetItem(str(process.get_completion_time())))
+            self.processStatsTable.setItem(row, 6, QTableWidgetItem(str(waiting_time)))
+            self.processStatsTable.setItem(row, 7, QTableWidgetItem(str(turnaround_time)))
+            self.processStatsTable.setItem(row, 8, QTableWidgetItem(str(response_time)))
+
 
     def update_gantt_chart(self):
         """

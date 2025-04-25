@@ -67,7 +67,7 @@ class RunLiveScene(QWidget):
         # Connect signals
         self.addLiveProcessButton.clicked.connect(self.add_live_process)
         self.runLiveButton.clicked.connect(self.run_live)
-        self.pauseButton.clicked.connect(self.pause_simulation)  # Pause button
+        # self.pauseButton.clicked.connect(self.pause_simulation)  # Pause button
         self.returnToInputSceneButton.clicked.connect(self.return_to_input)
 
         # Create the Gantt chart window but don't show it yet
@@ -92,16 +92,28 @@ class RunLiveScene(QWidget):
                 row, 2, QTableWidgetItem(str(process.get_arrival_time()))
             )
             self.processStatsTable.setItem(
-                row, 3, QTableWidgetItem(str(process.get_burst_time()))
+                row, 3, QTableWidgetItem(str(process.get_priority()))
             )
             self.processStatsTable.setItem(
-                row, 4, QTableWidgetItem(str(completion_time))
+                row, 4, QTableWidgetItem(str(process.get_burst_time()))
             )
-            self.processStatsTable.setItem(row, 5, QTableWidgetItem(str(waiting_time)))
             self.processStatsTable.setItem(
-                row, 6, QTableWidgetItem(str(turnaround_time))
+                row, 5, QTableWidgetItem(str(completion_time))
             )
-            self.processStatsTable.setItem(row, 7, QTableWidgetItem(str(response_time)))
+            self.processStatsTable.setItem(row, 6, QTableWidgetItem(str(waiting_time)))
+            self.processStatsTable.setItem(
+                row, 7, QTableWidgetItem(str(turnaround_time))
+            )
+            self.processStatsTable.setItem(row, 8, QTableWidgetItem(str(response_time)))
+
+            if "Priority" not in self.simulation.scheduler.name:
+                # Hide the priority column if the scheduler is not priority-based
+                self.processStatsTable.setColumnHidden(3, True)
+                self.prioritySpinBox.setEnabled(False)  # Disable priority spin box
+
+            self.processNameTextBox.setText(f"Process {self.next_pid}")
+            self.statusTextBox.setText("Ready")
+
 
     def add_live_process(self):
         """Add a live process to the simulation."""
@@ -137,30 +149,34 @@ class RunLiveScene(QWidget):
                 self.processStatsTable.setItem(
                     row,
                     2,
-                    QTableWidgetItem(str(self.simulation.scheduler.get_current_time())),
+                    QTableWidgetItem(str(self.simulation.scheduler.get_current_time()))
                 )  # Arrival time is always 0 for live processes
                 self.processStatsTable.setItem(
-                    row, 3, QTableWidgetItem(str(burst_time))
+                    row, 3, QTableWidgetItem(str(priority))
                 )
                 self.processStatsTable.setItem(
-                    row, 4, QTableWidgetItem(str("N/A"))
+                    row, 4, QTableWidgetItem(str(burst_time))
+                )
+                self.processStatsTable.setItem(
+                    row, 5, QTableWidgetItem(str("N/A"))
                 )  # completion time is not available yet
                 self.processStatsTable.setItem(
-                    row, 5, QTableWidgetItem("N/A")
+                    row, 6, QTableWidgetItem("N/A")
                 )  # Waiting time is not available yet
                 self.processStatsTable.setItem(
-                    row, 6, QTableWidgetItem("N/A")
+                    row, 7, QTableWidgetItem("N/A")
                 )  # Turnaround time is not available yet
                 self.processStatsTable.setItem(
-                    row, 7, QTableWidgetItem("N/A")
+                    row, 8, QTableWidgetItem("N/A")
                 )  # Response time is not available yet
 
+            # Update process name text box with next default name
+            self.processNameTextBox.setText(f"Process {self.next_pid}")
 
             # Clear the input fieldsets =
-            self.processNameTextBox.clear()
             self.burstTimeSpinBox.setValue(1)
             self.prioritySpinBox.setValue(0)
-
+            
             # Turn off creating process flag
             self.creating_process = False
 
@@ -173,6 +189,8 @@ class RunLiveScene(QWidget):
         def run_live_thread():
             live_simulation = None
             self.simulation.start()
+            self.runLiveButton.setEnabled(False)  # Disable the button during simulation
+            self.statusTextBox.setText("Running...")
 
             while self.simulation.is_running() and not self.simulation.is_paused():
                 # Lock the simulation to prevent concurrent access
@@ -196,6 +214,10 @@ class RunLiveScene(QWidget):
                 if self.simulation.scheduler.all_processes_completed():
                     # All processes are completed, show final Gantt chart
                     self.update_gantt_chart()
+                    self.averageWaitingTimeTextBox.setText(str(self.simulation.scheduler.get_average_waiting_time()))
+                    self.averageTurnaroundTimeTextBox.setText(str(self.simulation.scheduler.get_average_turnaround_time()))
+                    self.statusTextBox.setText("Done")
+
                     break
 
         threading.Thread(target=run_live_thread, daemon=True).start()
@@ -230,7 +252,7 @@ class RunLiveScene(QWidget):
                 # Update waiting time, turnaround time, and response time
                 burst_time: int = process.get_remaining_time()
                 self.processStatsTable.setItem(
-                    row, 3, QTableWidgetItem(str(burst_time))
+                    row, 4, QTableWidgetItem(str(burst_time))
                 )
 
                 if burst_time == 0:
@@ -239,17 +261,18 @@ class RunLiveScene(QWidget):
                     response_time = process.get_response_time()
 
                     self.processStatsTable.setItem(
-                        row, 4, QTableWidgetItem(str(process.get_completion_time()))
+                        row, 5, QTableWidgetItem(str(process.get_completion_time()))
                     )
                     self.processStatsTable.setItem(
-                        row, 5, QTableWidgetItem(str(waiting_time))
+                        row, 6, QTableWidgetItem(str(waiting_time))
                     )
                     self.processStatsTable.setItem(
-                        row, 6, QTableWidgetItem(str(turnaround_time))
+                        row, 7, QTableWidgetItem(str(turnaround_time))
                     )
                     self.processStatsTable.setItem(
-                        row, 7, QTableWidgetItem(str(response_time))
+                        row, 8, QTableWidgetItem(str(response_time))
                     )
+                self.processStatsTable.viewport().update()
                 break
 
     def update_gantt_chart(self):

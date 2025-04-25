@@ -77,23 +77,23 @@ class Scheduler(ABC):
 
     def get_average_waiting_time(self):
         """Calculate and return the average waiting time."""
-        no_of_completed_processes = len(self.completed_processes)
-        if no_of_completed_processes == 0:
+        if not self.processes:
             return 0.0
-
-        total_waiting_time = sum(p.get_waiting_time() for p in self.completed_processes)
-        return total_waiting_time / no_of_completed_processes
+        sum_waiting_time = 0
+        for process in self.processes:
+            sum_waiting_time += process.get_waiting_time()
+        no_of_processes = len(self.processes)
+        return sum_waiting_time / no_of_processes
 
     def get_average_turnaround_time(self):
         """Calculate and return the average turnaround time."""
-        no_of_completed_processes = len(self.completed_processes)
-        if no_of_completed_processes == 0:
+        if not self.processes:
             return 0.0
-
-        total_turnaround_time = sum(
-            p.get_turnaround_time() for p in self.completed_processes
-        )
-        return total_turnaround_time / no_of_completed_processes
+        sum_turnaround_time = 0
+        for process in self.processes:
+            sum_turnaround_time += process.get_turnaround_time()
+        no_of_processes = len(self.processes)
+        return sum_turnaround_time / no_of_processes
 
     def calculate_metrics(self):
         """Calculate and return the average waiting time and turnaround time."""
