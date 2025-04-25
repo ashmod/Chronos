@@ -20,7 +20,7 @@ class ProcessInputScene(QWidget):
         current_dir = os.path.dirname(os.path.abspath(__file__))
         ui_file = os.path.join(current_dir, "PyQtUI", "processInputSceneUI.ui")
         uic.loadUi(ui_file, self)
-        
+        self.setWindowTitle("CHRONOS")
         self.showMaximized()
 
         # Create simulation with initial scheduler

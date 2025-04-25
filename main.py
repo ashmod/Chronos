@@ -1,5 +1,7 @@
 import sys
+import qdarkstyle
 from PyQt5.QtWidgets import QApplication, QMainWindow
+from PyQt5.QtGui import QIcon
 from src.gui.process_input_scene import ProcessInputScene
 from src.gui.run_live_scene import RunLiveScene
 from src.gui.run_at_once_scene import RunAtOnceScene
@@ -26,11 +28,11 @@ def main():
     # Set application name and metadata
     app.setApplicationName("CHRONOS")
     app.setApplicationDisplayName("CHRONOS")
-
+    app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
     # Create and show main window
+    app.setWindowIcon(QIcon('docs/icon.ico'))
     window = ProcessInputScene()
     window.show()
-
     # Start application event loop
     sys.exit(app.exec())
 

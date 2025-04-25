@@ -16,7 +16,7 @@ class RunAtOnceScene(QWidget):
         
         # Load the UI
         uic.loadUi(ui_file, self)
-        
+        self.setWindowTitle("CHRONOS")       
         self.showMaximized()
 
         # Initialize UI elements

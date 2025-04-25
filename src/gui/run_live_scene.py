@@ -57,7 +57,7 @@ class RunLiveScene(QWidget):
         self.gantt_lock = threading.Lock()
         # Load the UI
         uic.loadUi(ui_file, self)
-
+        self.setWindowTitle("CHRONOS")
         self.showMaximized()
 
         # Initialize UI elements
@@ -216,9 +216,11 @@ class RunLiveScene(QWidget):
                     self.update_gantt_chart()
                     self.averageWaitingTimeTextBox.setText(str(self.simulation.scheduler.get_average_waiting_time()))
                     self.averageTurnaroundTimeTextBox.setText(str(self.simulation.scheduler.get_average_turnaround_time()))
-                    self.statusTextBox.setText("Done")
+                    # self.statusTextBox.setText("Done")
 
                     break
+            self.statusTextBox.setText("Done")
+            self.runLiveButton.setEnabled(True)  # Enable the button during simulation
 
         threading.Thread(target=run_live_thread, daemon=True).start()
 
