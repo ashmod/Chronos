@@ -84,7 +84,7 @@ The executable will be created in the `dist` folder.
 
 ## Team Members
 
-- [Shehab Mahmoud](https://github.com/dizzydroid)
+- [Shehab Mahmoud](https://github.com/ashmod)
 - [Abdelrahman Hany](https://github.com/DopeBiscuit)
 - [Youssef Shahean](https://github.com/unauthorised-401)
 - [Seif Ahmed](https://github.com/seifelwarwary)
